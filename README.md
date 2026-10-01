@@ -1,21 +1,23 @@
 # DARB — Home Assistant integration
 
-Connects a **DARB** hub (Distributed Autonomous Robotics Backbone) to Home
-Assistant. **Home Assistant owns the property; DARB owns the bodies** — the robots
-that move around it. This integration is where the two meet:
+Connects your **darbosphere** to Home Assistant. **DARB — Distributed Autonomous
+Robotics Backbone** — is the hub that the robots on a property join; **Home
+Assistant owns the property, DARB owns the bodies.** This integration is where the
+two meet:
 
 - every DARB **body becomes an HA device**: connected, battery, and what it is
   doing right now;
-- the **hub is a device** too: unread notifications, approvals waiting, tasks
-  running / queued / delayed / failed today, and the property's power source;
+- the **hub is a device** too: unread notifications, approvals waiting, the
+  **Bot Herder**'s tasks running / queued / delayed / failed today, and the
+  property's power source;
 - every new DARB notification fires a **`darb_notification` event**, so you route
   it however you already route alerts;
-- automations can **propose tasks** (`darb.create_task`) and **answer approvals**
-  (`darb.answer_approval`).
+- automations can **propose tasks to the Bot Herder** (`darb.create_task`) and
+  **answer approvals** (`darb.answer_approval`).
 
 The integration talks to DARB; DARB never talks to Home Assistant and holds no HA
-token. Nothing here can move a body directly: a proposed task is checked against
-each body's safety envelope by the hub, which may delay or refuse it.
+token. Nothing here can move a body directly: the Bot Herder checks a proposed
+task against each body's safety envelope, and may delay or refuse it.
 
 ## Install (HACS custom repository)
 

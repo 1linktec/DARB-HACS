@@ -73,7 +73,7 @@
   "services": {
     "create_task": {
       "name": "Propose a task",
-      "description": "Proposes a task to DARB. The hub checks it against each body's safety envelope before anything moves, and may delay or refuse it.",
+      "description": "Proposes a task to DARB's Bot Herder, which checks it against each body's safety envelope before anything moves, and may delay or refuse it.",
       "fields": {
         "goal": {
           "name": "Goal",

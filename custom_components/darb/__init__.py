@@ -1,5 +1,5 @@
 """
-DARB — Home Assistant integration.
+DARB (Distributed Autonomous Robotics Backbone) — Home Assistant integration.
 
 Home Assistant owns the property; DARB owns the bodies (architecture §12). This
 integration is how the two meet: each body becomes an HA device, DARB's
