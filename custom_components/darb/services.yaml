@@ -1,0 +1,44 @@
+create_task:
+  fields:
+    goal:
+      required: true
+      example: "Check the greenhouse door is closed"
+      selector:
+        text:
+    kind:
+      required: true
+      default: observe
+      selector:
+        select:
+          options:
+            - fetch
+            - observe
+            - say
+            - show
+            - plan
+    required_capabilities:
+      example: "see"
+      selector:
+        text:
+          multiple: true
+    priority:
+      default: 100
+      selector:
+        number:
+          min: 0
+          max: 1000
+          mode: box
+
+answer_approval:
+  fields:
+    request_id:
+      required: true
+      selector:
+        text:
+    decision:
+      required: true
+      selector:
+        select:
+          options:
+            - approved
+            - denied

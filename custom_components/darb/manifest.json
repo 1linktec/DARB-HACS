@@ -1,0 +1,18 @@
+{
+  "domain": "darb",
+  "name": "DARB",
+  "codeowners": [
+    "@1linktec"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/1linktec/darb-hacs",
+  "integration_type": "hub",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/1linktec/darb-hacs/issues",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "0.1.0",
+  "zeroconf": [
+    "_darb._tcp.local."
+  ]
+}

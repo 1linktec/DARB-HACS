@@ -1,0 +1,168 @@
+# The two checks that keep this integration honest against a moving target.
+#
+# Home Assistant changes fast and this integration is young. Auditing by eye finds
+# today's drift and none of next quarter's — these run on every push and on a schedule,
+# so a deprecation shows up as a red tick rather than as a user's broken install.
+#
+#   hassfest  — Home Assistant's own integration linter: manifest keys and their order,
+#               domain/version sanity, translations, dependencies, iot_class.
+#   HACS      — what HACS itself requires of a repository before it will install it.
+#   import    — does the code actually load against a real Home Assistant.
+#
+# The import job exists because the other two never execute a line of our Python, and
+# neither does ruff. A helper that moved modules, or a generic that isn't subscriptable
+# on the HA version we claim to support, is a clean pass everywhere and an ImportError
+# in the user's log on restart. Importing every module against the pinned floor is the
+# cheapest way to find that here instead of there.
+#
+# The weekly run matters more than the push run: nothing here changes for months at a
+# time, and the failures we care about arrive from upstream, not from us.
+name: Validate
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+jobs:
+  hassfest:
+    name: Home Assistant hassfest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: home-assistant/actions/hassfest@master
+
+  imports:
+    name: Imports on the minimum HA
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      # Pinned to the floor declared in hacs.json, not to latest. Latest would tell us
+      # the code works on HA today and say nothing about the oldest version we promise
+      # to support — which is the one that breaks for somebody.
+      #
+      # Installed against HA's own constraints file, because "pip install
+      # homeassistant==X" does NOT reproduce HA's dependency set — pip is free to pull
+      # newer transitive versions than HA ever tested, and then a green or red result
+      # is about pip's resolution rather than about us.
+      #
+      # pycares<5 is the case in point, and the reason it is spelled out: HA 2025.6.0
+      # pins aiodns==3.4.0 but puts no ceiling on pycares. pycares 5.0.0 (Jan 2026)
+      # removed ares_query_a_result, which aiodns 3.4.0 still references, so importing
+      # aiohttp — and therefore anything at all — dies. A June 2025 release cannot pin
+      # against a January 2026 break; pinning it here is our job, not theirs. Revisit
+      # when the HA floor moves past an aiodns that supports pycares 5.
+      - run: |
+          pip install "homeassistant==2025.6.0" "pycares<5" \
+            -c https://raw.githubusercontent.com/home-assistant/core/2025.6.0/homeassistant/package_constraints.txt
+      # Failures are emitted as ::error:: annotations and into the job summary, not
+      # just onto stdout. Job logs need admin rights to download; annotations and the
+      # summary are readable by anyone who can see the run, which is the difference
+      # between "CI is red" and knowing why.
+      - name: Import every module
+        run: |
+          python - <<'PY'
+          import importlib, os, pathlib, sys, traceback
+          sys.path.insert(0, "custom_components")
+          mods = sorted(p.stem for p in pathlib.Path(
+              "custom_components/darb").glob("*.py") if p.stem != "__init__")
+          failed = []
+          names = ["darb", *(f"darb.{m}" for m in mods)]
+          for name in names:
+              # Every submodule import runs darb/__init__.py first, so if the
+              # package is broken every module fails with the same traceback. Report
+              # the one that matters instead of a copy per module.
+              if failed and failed[0][0] == "darb":
+                  print(f"skip {name} (package import already failed)")
+                  continue
+              try:
+                  importlib.import_module(name)
+                  print(f"ok   {name}")
+              except Exception as e:
+                  tb = traceback.format_exc()
+                  failed.append((name, f"{type(e).__name__}: {e}", tb))
+                  # %0A is how a multi-line annotation is encoded; without it
+                  # everything after the first newline is silently dropped.
+                  print(f"::error title=import {name}::"
+                        + tb.replace("\n", "%0A"))
+          summary = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary:
+              with open(summary, "a") as fh:
+                  fh.write("## Import check\n\n")
+                  if not failed:
+                      fh.write(f"All {len(mods) + 1} modules imported.\n")
+                  for name, msg, tb in failed:
+                      fh.write(f"### {name}\n\n`{msg}`\n\n```\n{tb}\n```\n\n")
+          if failed:
+              sys.exit(f"{len(failed)} module(s) failed to import")
+          PY
+
+      # Importing proves the modules load; it does not prove the HA helpers we CALL
+      # still exist, because those calls only run when someone opens a dialog. A
+      # renamed config-flow helper would import cleanly and blow up in front of them.
+      - name: Check the HA APIs we depend on
+        run: |
+          python - <<'PY'
+          import sys
+          from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
+          from homeassistant.components.sensor import SensorDeviceClass
+
+          missing = []
+
+          def need(obj, attr, why):
+              # hasattr alone is not enough. Attributes that only ever exist on an
+              # INSTANCE — declared via __slots__ or a bare annotation, which is how
+              # ConfigEntry.runtime_data is defined — are absent from the class, so
+              # hasattr reports them missing when they are perfectly fine.
+              present = (
+                  hasattr(obj, attr)
+                  or attr in getattr(obj, "__annotations__", {})
+                  or attr in getattr(obj, "__slots__", ())
+              )
+              if not present:
+                  missing.append(f"{obj.__name__}.{attr} — {why}")
+
+          # Reauth: HA renamed/added these fairly recently, and they are only reached
+          # when a token is actually rejected — the least-tested path there is.
+          need(ConfigFlow, "_get_reauth_entry", "reauth step looks the entry up")
+          need(ConfigFlow, "async_update_reload_and_abort", "reauth saves + reloads")
+          # runtime_data replaced hass.data[DOMAIN][entry_id]; if this ever goes away
+          # the whole setup path goes with it.
+          need(ConfigEntry, "runtime_data", "per-entry state lives here")
+          need(OptionsFlow, "config_entry", "options flow no longer stores its own")
+
+          if not hasattr(SensorDeviceClass, "BATTERY"):
+              missing.append("SensorDeviceClass.BATTERY — body battery sensor")
+
+          # Zeroconf is how a hub is found without typing an address, and it only
+          # runs when one is discovered. The ServiceInfo class moved into helpers.
+          try:
+              from homeassistant.helpers.service_info.zeroconf import (  # noqa: F401
+                  ZeroconfServiceInfo,
+              )
+          except ImportError as e:
+              missing.append(f"helpers.service_info.zeroconf — {e}")
+          from homeassistant.config_entries import ConfigEntries
+          need(ConfigEntries, "async_schedule_reload", "follows a hub that moved")
+
+          for m in missing:
+              print(f"::error title=HA API gone::{m}")
+          print("\n".join(missing) or "All depended-on HA APIs present.")
+          sys.exit(1 if missing else 0)
+          PY
+
+  hacs:
+    name: HACS validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hacs/action@main
+        with:
+          category: integration
+          # No DARB icon yet. Ship brand/ images and drop this exclusion then.
+          ignore: brands

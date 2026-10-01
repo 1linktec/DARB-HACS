@@ -1,0 +1,111 @@
+{
+  "config": {
+    "flow_title": "DARB hub ({host})",
+    "step": {
+      "user": {
+        "title": "Pair with your DARB hub",
+        "description": "On the hub, run `sudo darb-pair --ha` and paste the whole line it prints. It carries the hub's address and a key issued to Home Assistant alone. If you paste only the key, enter the hub address too.\n\n{detail}",
+        "data": {
+          "pairing": "Pairing line or key",
+          "url": "Hub address (only if you pasted a bare key)"
+        }
+      },
+      "pair": {
+        "title": "Pair with the DARB hub at {url}",
+        "description": "Found on your network. On the hub, run `sudo darb-pair --ha` and paste the line it prints.\n\n{detail}",
+        "data": {
+          "pairing": "Pairing line or key"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Re-pair with DARB",
+        "description": "The hub at {url} no longer accepts Home Assistant's key, so it was revoked or the hub was reset. Run `sudo darb-pair --ha` on the hub and paste the new line.\n\n{detail}",
+        "data": {
+          "pairing": "Pairing line or key"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reach the hub.",
+      "invalid_auth": "The hub rejected that key.",
+      "no_key": "No key found. Paste the whole line from `darb-pair --ha`, or the 64-character key.",
+      "no_url": "That was a bare key; enter the hub address too, e.g. http://192.168.1.20:8080."
+    },
+    "abort": {
+      "already_configured": "This DARB hub is already set up.",
+      "reauth_successful": "Re-paired.",
+      "single_instance_allowed": "A DARB hub is already set up."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "unread_notifications": {
+        "name": "Unread notifications"
+      },
+      "tasks_running": {
+        "name": "Tasks running"
+      },
+      "tasks_queued": {
+        "name": "Tasks queued"
+      },
+      "tasks_delayed": {
+        "name": "Tasks delayed"
+      },
+      "tasks_failed_today": {
+        "name": "Tasks failed today"
+      },
+      "power_source": {
+        "name": "Power source"
+      },
+      "pending_approvals": {
+        "name": "Approvals waiting"
+      },
+      "task": {
+        "name": "Task"
+      }
+    },
+    "binary_sensor": {
+      "online": {
+        "name": "Connected"
+      }
+    }
+  },
+  "services": {
+    "create_task": {
+      "name": "Propose a task",
+      "description": "Proposes a task to DARB. The hub checks it against each body's safety envelope before anything moves, and may delay or refuse it.",
+      "fields": {
+        "goal": {
+          "name": "Goal",
+          "description": "What should be done, in plain words."
+        },
+        "kind": {
+          "name": "Kind",
+          "description": "fetch, observe, say, show or plan."
+        },
+        "required_capabilities": {
+          "name": "Required capabilities",
+          "description": "Only bodies with all of these are considered, e.g. see, grasp."
+        },
+        "priority": {
+          "name": "Priority",
+          "description": "Higher runs first. Default 100."
+        }
+      }
+    },
+    "answer_approval": {
+      "name": "Answer an approval",
+      "description": "Approves or denies a request waiting on a person. The request id is in the Approvals waiting sensor's attributes.",
+      "fields": {
+        "request_id": {
+          "name": "Request id",
+          "description": "Which request to answer."
+        },
+        "decision": {
+          "name": "Decision",
+          "description": "approved or denied."
+        }
+      }
+    }
+  }
+}

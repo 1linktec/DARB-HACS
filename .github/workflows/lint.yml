@@ -1,0 +1,23 @@
+# Ruff, matched to Home Assistant's own conventions.
+#
+# Deliberately separate from validate.yml: hassfest tells us whether HA will accept the
+# integration, this tells us whether the Python is tidy. Mixing them makes a style nit
+# look like a compatibility failure.
+name: Lint
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  ruff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install ruff
+      - run: ruff check custom_components/
+      - run: ruff format --check custom_components/

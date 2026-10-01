@@ -1,0 +1,39 @@
+"""DARB integration constants."""
+
+DOMAIN = "darb"
+
+# Config entry data
+CONF_URL = "url"
+CONF_KEY = "key"
+# What the user pastes: the whole line `sudo darb-pair --ha` prints
+# (`http://<hub>:8080/app/#k=<key>`), or a bare key.
+CONF_PAIRING = "pairing"
+
+# The hub's own key is 64 hex characters (openssl rand -hex 32).
+KEY_PATTERN = r"[0-9a-fA-F]{64}"
+
+# Polled, as VerdiGrow is. A body going offline should show in HA within one
+# interval; 15 s is the app's own cadence order and cheap on the hub (/fleet is
+# one round trip by design). Push replaces this when presence needs seconds.
+SCAN_SECONDS = 15
+
+# Tool server paths (X-API-Key auth). Read-and-propose only: this API cannot
+# actuate a body directly — every task is validated by the hub before dispatch.
+API_FLEET = "/fleet"
+API_NOTIFICATIONS = "/notifications"
+API_APPROVALS = "/approvals"
+API_TASKS = "/tasks"
+
+# Fired once for every new DARB notification, so an owner routes them however
+# they already route everything else. An event rather than a notify call: we do
+# not know which notifiers exist, and guessing one fails silently (VerdiGrow).
+EVENT_NOTIFICATION = "darb_notification"
+
+# Where the newest-seen notification marker lives, so a restart does not replay
+# what was already announced.
+STORAGE_KEY_NOTIFY = "darb_notifications"
+STORAGE_VERSION = 1
+
+# Services
+SERVICE_CREATE_TASK = "create_task"
+SERVICE_ANSWER_APPROVAL = "answer_approval"

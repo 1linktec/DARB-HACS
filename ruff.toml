@@ -1,0 +1,17 @@
+# Matched to Home Assistant core's own style, as in verdigrow-hacs, so the
+# integration reads like an integration.
+target-version = "py313"
+line-length = 88
+
+[lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+ignore = [
+    # HA's own codebase carries these; enforcing them here would mean fighting the
+    # framework's idioms rather than following them.
+    "B008",    # function call in argument defaults — HA does this constantly
+    "RUF012",  # mutable class attrs need ClassVar — noisy on HA entity classes
+]
+
+[lint.isort]
+force-sort-within-sections = true
+known-first-party = ["custom_components"]
