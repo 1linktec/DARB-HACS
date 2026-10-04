@@ -87,7 +87,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     async def create_task(call: ServiceCall) -> ServiceResponse:
         entry = _entry(hass)
         try:
-            task = await entry.runtime_data.client.async_create_task(dict(call.data))
+            # Marked as asked from HA, so DARB delivers the result back here
+            # (a darb_task_done event) rather than to a body or only the app.
+            task = await entry.runtime_data.client.async_create_task(
+                {**call.data, "requested_via": "ha"}
+            )
         except DarbError as e:
             raise HomeAssistantError(f"DARB refused the task: {e}") from e
         await entry.runtime_data.coordinator.async_request_refresh()

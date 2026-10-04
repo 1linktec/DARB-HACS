@@ -75,6 +75,22 @@ Fields: `id`, `kind`, `severity`, `title`, `detail`, `body_id`, `body_name`,
 `task_id`, `auth_request_id`, `created_at`. Notifications already on the hub when
 the integration is added are history and are not replayed.
 
+`darb_task_done` fires as well when a task finishes, with `task_id`, `title` and
+`answer` — so an automation that called `darb.create_task` (whose response
+carries the `task_id`) can wait for its result:
+
+```yaml
+actions:
+  - action: darb.create_task
+    data: {goal: "What is the weather tomorrow?", kind: observe}
+    response_variable: t
+  - wait_for_trigger:
+      - trigger: event
+        event_type: darb_task_done
+        event_data: {task_id: "{{ t.task_id }}"}
+    timeout: "00:05:00"
+```
+
 ## Status
 
 v0.1 polls the hub every 15 s. Planned: an *Expose to DARB* list (HA entities the

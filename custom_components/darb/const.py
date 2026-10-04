@@ -29,6 +29,12 @@ API_TASKS = "/tasks"
 # not know which notifiers exist, and guessing one fails silently (VerdiGrow).
 EVENT_NOTIFICATION = "darb_notification"
 
+# Fired as well when the notification says a task finished, carrying its
+# answer -- so an automation that proposed a task can wait for the result.
+# DARB delivers results "back the way they came" (architecture section 4);
+# for a task proposed from HA, this event is the way back.
+EVENT_TASK_DONE = "darb_task_done"
+
 # Where the newest-seen notification marker lives, so a restart does not replay
 # what was already announced.
 STORAGE_KEY_NOTIFY = "darb_notifications"

@@ -16,6 +16,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .api import DarbAuthError, DarbClient, DarbError
 from .const import (
     EVENT_NOTIFICATION,
+    EVENT_TASK_DONE,
     SCAN_SECONDS,
     STORAGE_KEY_NOTIFY,
     STORAGE_VERSION,
@@ -109,6 +110,18 @@ class DarbCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self.hass.bus.async_fire(
                 EVENT_NOTIFICATION, {k: n.get(k) for k in _EVENT_FIELDS}
             )
+            if n.get("kind") == "task_done":
+                # The way back for a task proposed from HA: the answer itself,
+                # keyed by task_id so an automation can wait for its own task.
+                self.hass.bus.async_fire(
+                    EVENT_TASK_DONE,
+                    {
+                        "task_id": n.get("task_id"),
+                        "title": n.get("title"),
+                        "answer": n.get("detail"),
+                        "created_at": n.get("created_at"),
+                    },
+                )
         if fresh:
             await self._remember(newest)
 
