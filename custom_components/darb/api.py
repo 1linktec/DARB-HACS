@@ -62,7 +62,7 @@ def parse_pairing(text: str) -> tuple[str | None, str | None]:
     return url, key
 
 
-# A pairing code from the Darb app (Settings > Phones > Connect Home Assistant):
+# A pairing code from the Darb app (Settings > Devices > Connect Home Assistant):
 # 10 base32 characters, shown as XXXXX-XXXXX; one use, 15 minutes.
 CODE_PATTERN = re.compile(r"\s*([A-Za-z2-7]{5})[-\s]?([A-Za-z2-7]{5})\s*")
 

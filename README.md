@@ -33,7 +33,7 @@ task against each body's safety envelope, and may delay or refuse it.
 
 ## Pair
 
-In the **Darb app**, as an admin: **Settings › Phones › Connect Home Assistant ›
+In the **Darb app**, as an admin: **Settings › Devices › Connect Home Assistant ›
 Make code**. It shows a one-time code like `ABCDE-FGH23` (good for 15 minutes)
 and the hub's address. In Home Assistant, add DARB and type the code; capitals
 and the dash are optional.

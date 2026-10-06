@@ -1,6 +1,6 @@
 """Config flow for DARB: discover the hub, pair with a code from the Darb app.
 
-An admin taps Settings > Phones > Connect Home Assistant in the Darb app and
+An admin taps Settings > Devices > Connect Home Assistant in the Darb app and
 gets a one-time code (XXXXX-XXXXX, 15 minutes). Entered here, it is traded with
 the hub for a key issued to Home Assistant alone -- no key is ever shown on a
 phone. The older routes still work: the line `sudo darb-pair --ha` prints, or a

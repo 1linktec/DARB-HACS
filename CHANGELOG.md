@@ -3,6 +3,11 @@
 Each version here becomes a GitHub release (the `## x.y.z` heading is the tag
 without its `v`), and HACS shows its notes when it offers the update.
 
+## 0.4.1 — 2026-10-06
+
+- Pairing screens name the right place in the Darb app: Settings › **Devices** ›
+  Connect Home Assistant (the tab was renamed from Phones).
+
 ## 0.4.0 — 2026-10-06
 
 - **Pair with a one-time code from the Darb app**: Settings › Devices › Connect
