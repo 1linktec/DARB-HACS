@@ -4,32 +4,33 @@
     "step": {
       "user": {
         "title": "Pair with your DARB hub",
-        "description": "On the hub, run `sudo darb-pair --ha` and paste the whole line it prints. It carries the hub's address and a key issued to Home Assistant alone. If you paste only the key, enter the hub address too.\n\n{detail}",
+        "description": "In the Darb app (as an admin): Settings › Phones › Connect Home Assistant › Make code. Enter the code and the hub address the app shows.\n\nOr, on the hub, run `sudo darb-pair --ha` and paste the whole line it prints.\n\n{detail}",
         "data": {
-          "pairing": "Pairing line or key",
-          "url": "Hub address (only if you pasted a bare key)"
+          "pairing": "Pairing code",
+          "url": "Hub address (e.g. http://192.168.1.20:8080)"
         }
       },
       "pair": {
         "title": "Pair with the DARB hub at {url}",
-        "description": "Found on your network. On the hub, run `sudo darb-pair --ha` and paste the line it prints.\n\n{detail}",
+        "description": "Found on your network. In the Darb app (as an admin): Settings › Phones › Connect Home Assistant › Make code. Enter the code here.\n\n{detail}",
         "data": {
-          "pairing": "Pairing line or key"
+          "pairing": "Pairing code"
         }
       },
       "reauth_confirm": {
         "title": "Re-pair with DARB",
-        "description": "The hub at {url} no longer accepts Home Assistant's key, so it was revoked or the hub was reset. Run `sudo darb-pair --ha` on the hub and paste the new line.\n\n{detail}",
+        "description": "The hub at {url} no longer accepts Home Assistant's key: it was revoked, replaced by a newer connection, or the hub was reset. In the Darb app (as an admin): Settings › Phones › Connect Home Assistant › Make code. Enter the new code.\n\n{detail}",
         "data": {
-          "pairing": "Pairing line or key"
+          "pairing": "Pairing code"
         }
       }
     },
     "error": {
       "cannot_connect": "Could not reach the hub.",
       "invalid_auth": "The hub rejected that key.",
-      "no_key": "No key found. Paste the whole line from `darb-pair --ha`, or the 64-character key.",
-      "no_url": "That was a bare key; enter the hub address too, e.g. http://192.168.1.20:8080."
+      "no_key": "That is not a pairing code. It looks like ABCDE-FGH23 and comes from the Darb app (Settings › Phones › Connect Home Assistant).",
+      "no_url": "Enter the hub address too, e.g. http://192.168.1.20:8080 (the Darb app shows it with the code).",
+      "code_used": "That code has been used or has expired (codes last 15 minutes, one use). Make a new one in the Darb app."
     },
     "abort": {
       "already_configured": "This DARB hub is already set up.",

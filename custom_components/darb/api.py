@@ -16,6 +16,7 @@ from .const import (
     API_CONVERSE,
     API_FLEET,
     API_NOTIFICATIONS,
+    API_REDEEM,
     API_TASKS,
     KEY_PATTERN,
 )
@@ -59,6 +60,46 @@ def parse_pairing(text: str) -> tuple[str | None, str | None]:
     elif re.fullmatch(KEY_PATTERN, text):
         key = text.lower()
     return url, key
+
+
+# A pairing code from the Darb app (Settings > Phones > Connect Home Assistant):
+# 10 base32 characters, shown as XXXXX-XXXXX; one use, 15 minutes.
+CODE_PATTERN = re.compile(r"\s*([A-Za-z2-7]{5})[-\s]?([A-Za-z2-7]{5})\s*")
+
+
+def parse_code(text: str) -> str | None:
+    """The app's pairing code, normalised to XXXXX-XXXXX, or None."""
+    m = CODE_PATTERN.fullmatch(text or "")
+    return f"{m.group(1)}-{m.group(2)}".upper() if m else None
+
+
+class DarbCodeError(DarbError):
+    """The hub refused the pairing code (used, expired, or too many tries)."""
+
+
+async def async_redeem_code(hass: HomeAssistant, url: str, code: str) -> str:
+    """Trade a one-time code for Home Assistant's own key.
+
+    No key is needed to call this: the code is the credential, once. The key
+    is created on the hub and sent only here.
+    """
+    session = async_get_clientsession(hass)
+    try:
+        async with session.post(
+            url.rstrip("/") + API_REDEEM,
+            # Names the client on the hub: "Home Assistant (<home name>)".
+            json={"token": code, "device": (hass.config.location_name or "")[:40]},
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as r:
+            if r.status in (410, 429):
+                raise DarbCodeError(str(r.status))
+            if r.status >= 400:
+                raise DarbError(f"{r.status}: {r.reason}")
+            return (await r.json())["key"]
+    except DarbError:
+        raise
+    except Exception as e:  # network / timeout / non-JSON
+        raise DarbError(str(e) or type(e).__name__) from e
 
 
 class DarbClient:

@@ -33,15 +33,18 @@ task against each body's safety envelope, and may delay or refuse it.
 
 ## Pair
 
-On the hub:
+In the **Darb app**, as an admin: **Settings › Phones › Connect Home Assistant ›
+Make code**. It shows a one-time code like `ABCDE-FGH23` (good for 15 minutes)
+and the hub's address. In Home Assistant, add DARB and type the code; capitals
+and the dash are optional.
 
-```
-sudo darb-pair --ha
-```
+Home Assistant trades the code with the hub for its own key, so no key is ever
+shown on a phone. Only admins can make a code. Connecting again replaces the
+old Home Assistant key, and if the key is revoked HA asks you to re-pair: make
+a new code.
 
-Paste the whole line it prints into the dialog. The key in it is issued to Home
-Assistant alone, so it can be revoked without touching your phone's. If it is
-ever revoked, HA asks you to re-pair; run the command again.
+Fallback from the hub console: `sudo darb-pair --ha` prints a line to paste
+instead.
 
 ## Entities
 
@@ -121,7 +124,7 @@ entities makes it faster.
 
 ## Status
 
-v0.3 polls the hub every 15 s. Planned: an *Expose to DARB* list (HA entities the
+v0.4 polls the hub every 15 s. Planned: an *Expose to DARB* list (HA entities the
 planner may reason over), HA's own robots as DARB bodies, presence for people,
 camera entities, and a push channel.
 

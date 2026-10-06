@@ -1,9 +1,11 @@
-"""Config flow for DARB: discover the hub, pair with a key it issued.
+"""Config flow for DARB: discover the hub, pair with a code from the Darb app.
 
-Pairing mirrors the Darb app. The owner runs `sudo darb-pair --ha` on the hub
-and pastes the line it prints; the key is HA's own, revocable without touching
-the phone's. When the hub is found by zeroconf the address is already known, so
-only the key is asked for.
+An admin taps Settings > Phones > Connect Home Assistant in the Darb app and
+gets a one-time code (XXXXX-XXXXX, 15 minutes). Entered here, it is traded with
+the hub for a key issued to Home Assistant alone -- no key is ever shown on a
+phone. The older routes still work: the line `sudo darb-pair --ha` prints, or a
+bare key. When the hub is found by zeroconf the address is already known, so
+only the code is asked for.
 """
 
 from __future__ import annotations
@@ -16,14 +18,23 @@ from homeassistant.helpers import selector
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 import voluptuous as vol
 
-from .api import DarbAuthError, DarbClient, DarbError, parse_pairing
+from .api import (
+    DarbAuthError,
+    DarbClient,
+    DarbCodeError,
+    DarbError,
+    async_redeem_code,
+    parse_code,
+    parse_pairing,
+)
 from .const import CONF_KEY, CONF_PAIRING, CONF_URL, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-# The pasted line carries the key, so the field hides it like a password.
+# Plain text: the usual entry is a one-time code, and a typo is easier to
+# spot when it can be seen. (A pasted darb-pair line or key works here too.)
 PAIRING_SELECTOR = selector.TextSelector(
-    selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
+    selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT)
 )
 
 
@@ -39,6 +50,28 @@ async def _check(hass, url: str, key: str) -> tuple[str | None, str]:
     return None, ""
 
 
+async def _key_from(
+    hass, url: str | None, text: str
+) -> tuple[str | None, str | None, str]:
+    """(key, error_key, detail) from whatever was entered: an app code (traded
+    for a key now), a darb-pair line, or a bare key."""
+    _, key = parse_pairing(text)
+    if key:
+        return key, None, ""
+    code = parse_code(text)
+    if not code:
+        return None, "no_key", ""
+    if not url:
+        return None, "no_url", ""
+    try:
+        return await async_redeem_code(hass, url, code), None, ""
+    except DarbCodeError:
+        return None, "code_used", ""
+    except DarbError as e:
+        _LOGGER.warning("DARB hub at %s unreachable: %s", url, e)
+        return None, "cannot_connect", str(e)
+
+
 class DarbConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
@@ -48,17 +81,20 @@ class DarbConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Manual setup: paste the pairing line (or a hub address plus a key)."""
+        """Manual setup: the app's code plus the hub address (or a darb-pair line)."""
         errors: dict[str, str] = {}
         detail = ""
         data = user_input or {}
         if user_input is not None:
-            url, key = parse_pairing(user_input[CONF_PAIRING])
+            url, _ = parse_pairing(user_input[CONF_PAIRING])
             url = (user_input.get(CONF_URL) or "").strip().rstrip("/") or url
-            if not key:
-                errors[CONF_PAIRING] = "no_key"
-            elif not url:
-                errors[CONF_URL] = "no_url"
+            key, err, detail = await _key_from(self.hass, url, user_input[CONF_PAIRING])
+            if err in ("no_key", "code_used"):
+                errors[CONF_PAIRING] = err
+            elif err == "no_url":
+                errors[CONF_URL] = err
+            elif err:
+                errors["base"] = err
             else:
                 err, detail = await _check(self.hass, url, key)
                 if err:
@@ -103,13 +139,17 @@ class DarbConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_pair(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Hub found by discovery: only the key is needed."""
+        """Hub found by discovery: only the code is needed."""
         errors: dict[str, str] = {}
         detail = ""
         if user_input is not None:
-            _, key = parse_pairing(user_input[CONF_PAIRING])
-            if not key:
-                errors[CONF_PAIRING] = "no_key"
+            key, err, detail = await _key_from(
+                self.hass, self._url, user_input[CONF_PAIRING]
+            )
+            if err in ("no_key", "code_used"):
+                errors[CONF_PAIRING] = err
+            elif err:
+                errors["base"] = err
             else:
                 err, detail = await _check(self.hass, self._url, key)
                 if err:
@@ -132,14 +172,18 @@ class DarbConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Ask for a fresh pairing line, keeping the address that works."""
+        """Ask for a fresh code, keeping the address that works."""
         entry = self._get_reauth_entry()
         errors: dict[str, str] = {}
         detail = ""
         if user_input is not None:
-            _, key = parse_pairing(user_input[CONF_PAIRING])
-            if not key:
-                errors[CONF_PAIRING] = "no_key"
+            key, err, detail = await _key_from(
+                self.hass, entry.data[CONF_URL], user_input[CONF_PAIRING]
+            )
+            if err in ("no_key", "code_used"):
+                errors[CONF_PAIRING] = err
+            elif err:
+                errors["base"] = err
             else:
                 err, detail = await _check(self.hass, entry.data[CONF_URL], key)
                 if err:
