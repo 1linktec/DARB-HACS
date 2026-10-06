@@ -6,7 +6,8 @@ brain for the robots and the house (Jeff, 6 Oct).
 
 DARB still holds no HA token. Each turn this entity sends the hub HA's chat log,
 the tools HA's Assist API offers, and the exposed entities that open the house
-(locks, alarm panels, garage doors, gates, doors). The hub answers with one model
+(locks, alarm panels, garage doors, gates, doors) among the devices exposed to
+DARB. The hub answers with one model
 turn. Its own lookups come back already run (`external`, with results, so HA's
 chat log and debug trace show them); HA's tool calls come back for Assist to run
 here -- so only entities exposed to Assist are reachable, and HA's permissions
@@ -23,20 +24,10 @@ import logging
 from typing import Any, Literal
 
 from homeassistant.components import conversation
-from homeassistant.components.homeassistant.exposed_entities import async_should_expose
 from homeassistant.const import MATCH_ALL
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import (
-    area_registry as ar,
-)
-from homeassistant.helpers import (
     device_registry as dr,
-)
-from homeassistant.helpers import (
-    entity_registry as er,
-)
-from homeassistant.helpers import (
-    floor_registry as fr,
 )
 from homeassistant.helpers import (
     intent,
@@ -53,7 +44,8 @@ from .api import DarbError
 from .const import DOMAIN
 from .coordinator import DarbConfigEntry
 from .entity import HUB_DEVICE_ID
-from .guard import GUARDED_CLASSES, GUARDED_DOMAINS, guard_refusal
+from .guard import guard_refusal
+from .home import API_ID, Exposure, describe
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -74,46 +66,27 @@ async def async_setup_entry(
     async_add_entities([DarbConversationEntity(entry)])
 
 
-def guarded_entities(hass: HomeAssistant) -> list[dict[str, Any]]:
-    """Exposed entities that open the house, with every name a person might use."""
-    ents, devs = er.async_get(hass), dr.async_get(hass)
-    areas, floors = ar.async_get(hass), fr.async_get(hass)
+def guarded_entities(hass: HomeAssistant, exp: Exposure) -> list[dict[str, Any]]:
+    """Entities exposed to DARB to control that open the house, with every name
+    a person might use (guard.py refuses them to an unidentified voice)."""
     out = []
-    for state in hass.states.async_all():
-        domain = state.domain
-        dclass = state.attributes.get("device_class")
-        if not (
-            domain in GUARDED_DOMAINS
-            or (domain == "cover" and dclass in GUARDED_CLASSES)
-        ):
-            continue
-        if not async_should_expose(hass, conversation.DOMAIN, state.entity_id):
-            continue
-        entry = ents.async_get(state.entity_id)
-        area_id = entry.area_id if entry else None
-        aliases: list[str] = []
-        if entry:
-            aliases = [a for a in entry.aliases if isinstance(a, str)]
-            if (
-                not area_id
-                and entry.device_id
-                and (dev := devs.async_get(entry.device_id))
-            ):
-                area_id = dev.area_id
-        area = areas.async_get_area(area_id) if area_id else None
-        floor = (
-            floors.async_get_floor(area.floor_id) if area and area.floor_id else None
-        )
-        out.append(
-            {
-                "name": state.name,
-                "aliases": aliases,
-                "domain": domain,
-                "device_class": dclass,
-                "area": area.name if area else None,
-                "floor": floor.name if floor else None,
-            }
-        )
+    for eid in sorted(exp.control):
+        d = describe(hass, eid, exp)
+        if d and d["guarded"]:
+            out.append(
+                {
+                    k: d[k]
+                    for k in (
+                        "entity_id",
+                        "name",
+                        "aliases",
+                        "domain",
+                        "device_class",
+                        "area",
+                        "floor",
+                    )
+                }
+            )
     return out
 
 
@@ -166,7 +139,7 @@ class DarbConversationEntity(conversation.ConversationEntity):
         try:
             await chat_log.async_provide_llm_data(
                 user_input.as_llm_context(DOMAIN),
-                llm.LLM_API_ASSIST,
+                API_ID,
                 HA_PROMPT,
                 user_input.extra_system_prompt,
             )
@@ -184,7 +157,7 @@ class DarbConversationEntity(conversation.ConversationEntity):
             }
             for t in (api.tools if api else [])
         ]
-        guarded = guarded_entities(self.hass)
+        guarded = guarded_entities(self.hass, Exposure.of(dict(self.entry.options)))
         user = None
         if user_input.context.user_id:
             u = await self.hass.auth.async_get_user(user_input.context.user_id)

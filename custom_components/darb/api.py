@@ -15,6 +15,8 @@ from .const import (
     API_APPROVALS,
     API_CONVERSE,
     API_FLEET,
+    API_HA_ACTIONS,
+    API_HA_ENTITIES,
     API_NOTIFICATIONS,
     API_REDEEM,
     API_TASKS,
@@ -159,3 +161,24 @@ class DarbClient:
     async def async_converse(self, turn: dict) -> dict:
         # One model turn on the hub; a small model with tools can take a while.
         return await self._request("POST", API_CONVERSE, timeout=75, json=turn)
+
+    # Expose to DARB (049 on the hub): the entities DARB may see / control.
+    async def async_push_entities(self, full: bool, entities: list[dict]) -> Any:
+        return await self._request(
+            "POST",
+            API_HA_ENTITIES,
+            timeout=30,
+            json={"full": full, "entities": entities},
+        )
+
+    async def async_claim_actions(self) -> list[dict]:
+        return await self._request("GET", API_HA_ACTIONS)
+
+    async def async_action_result(
+        self, task_id: str, ok: bool, detail: str | None, state: str | None
+    ) -> Any:
+        return await self._request(
+            "POST",
+            f"{API_HA_ACTIONS}/{task_id}",
+            json={"ok": ok, "detail": (detail or "")[:1000], "state": state},
+        )

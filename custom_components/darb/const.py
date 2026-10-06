@@ -27,6 +27,10 @@ API_TASKS = "/tasks"
 API_CONVERSE = "/converse"
 # Trade a one-time pairing code from the Darb app for HA's own key (no key needed).
 API_REDEEM = "/clients/redeem"
+# Expose to DARB: the entities this HA lets DARB see/control, and the HA actions
+# the Bot Herder queues for HA to run (hub schema 049).
+API_HA_ENTITIES = "/ha/entities"
+API_HA_ACTIONS = "/ha/actions"
 
 # Fired once for every new DARB notification, so an owner routes them however
 # they already route everything else. An event rather than a notify call: we do

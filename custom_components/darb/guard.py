@@ -46,7 +46,9 @@ def guard_refusal(name: str, args: dict, guarded: list[dict]) -> str | None:
     if domains & GUARDED_DOMAINS or classes & GUARDED_CLASSES:
         return APP_SAYS
     for g in guarded or []:
-        if names & _lower_set([g.get("name"), *(g.get("aliases") or [])]):
+        if names & _lower_set(
+            [g.get("name"), g.get("entity_id"), *(g.get("aliases") or [])]
+        ):
             return APP_SAYS
         in_area = areas & _lower_set([g.get("area"), g.get("floor")])
         if not names and in_area and (not domains or g.get("domain") in domains):

@@ -47,6 +47,8 @@ class DarbData:
 
     client: DarbClient
     coordinator: DarbCoordinator
+    home: Any = None  # home.HomeSync -- Expose to DARB
+    unregister_api: Any = None
 
 
 type DarbConfigEntry = ConfigEntry[DarbData]

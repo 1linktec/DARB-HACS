@@ -3,6 +3,20 @@
 Each version here becomes a GitHub release (the `## x.y.z` heading is the tag
 without its `v`), and HACS shows its notes when it offers the update.
 
+## 0.6.0 — 2026-10-06
+
+- **Expose to DARB** (Configure on the DARB integration): DARB's own list of devices
+  it may *see*, and ones it may *see and change* -- separate from what Home
+  Assistant's other assistants see.
+- DARB's voice agent uses those devices through its own tools (`GetHomeState`,
+  `HomeAction`) instead of the Assist exposure.
+- The exposed devices and every change to them go to the DARB hub, so DARB can plan
+  with them (who is home, doors, temperatures).
+- **DARB can act on the house through its Bot Herder**: an "HA action" task runs
+  here and reports back. Locks, alarm panels, garage doors and gates wait for a
+  person's approval in the Darb app, and are never opened by voice.
+- On the hub, the Bot Herder picks which AI engine answers each voice request.
+
 ## 0.5.2 — 2026-10-06
 
 - Clearer pairing: the screens name the app's **Make Home Assistant code** button,

@@ -26,6 +26,7 @@ from homeassistant.core import (
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import llm
 from homeassistant.helpers.typing import ConfigType
 import voluptuous as vol
 
@@ -38,6 +39,7 @@ from .const import (
     SERVICE_CREATE_TASK,
 )
 from .coordinator import DarbConfigEntry, DarbCoordinator, DarbData
+from .home import API_ID, DarbHomeApi, Exposure, HomeSync
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -136,11 +138,41 @@ async def async_setup_entry(hass: HomeAssistant, entry: DarbConfigEntry) -> bool
     # down at HA start is retried, and a revoked key asks to re-pair.
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = DarbData(client=client, coordinator=coordinator)
+
+    # Expose to DARB (Jeff, 6 Oct): DARB's own list of entities it may see or
+    # control -- its voice tools, the hub's planning context, and HA actions.
+    def exposure() -> Exposure:
+        return Exposure.of(dict(entry.options))
+
+    entry.runtime_data.unregister_api = llm.async_register_api(
+        hass,
+        DarbHomeApi(
+            hass=hass,
+            id=API_ID,
+            name="DARB (devices exposed to DARB)",
+            exposure=exposure,
+        ),
+    )
+    entry.runtime_data.home = HomeSync(hass, client, exposure)
+    await entry.runtime_data.home.async_start()
+    entry.async_on_unload(entry.add_update_listener(_options_changed))
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
+async def _options_changed(hass: HomeAssistant, entry: DarbConfigEntry) -> None:
+    """A new Expose-to-DARB list: reload, so the tools, the push and the
+    tracked entities all follow it."""
+    await hass.config_entries.async_reload(entry.entry_id)
+
+
 async def async_unload_entry(hass: HomeAssistant, entry: DarbConfigEntry) -> bool:
+    data = entry.runtime_data
+    if data.home:
+        await data.home.async_stop()
+    if data.unregister_api:
+        data.unregister_api()
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
