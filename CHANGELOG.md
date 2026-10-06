@@ -3,6 +3,15 @@
 Each version here becomes a GitHub release (the `## x.y.z` heading is the tag
 without its `v`), and HACS shows its notes when it offers the update.
 
+## 0.5.0 — 2026-10-06
+
+- **HTTPS to the hub.** The hub advertises its https address; when its certificate
+  is publicly trusted (Let's Encrypt from the app's Settings › Certificates), Home
+  Assistant connects over https instead of plain http on the LAN. A hub on a
+  self-signed or household-CA certificate stays on http, which HA can reach.
+- An existing http connection moves to https on the next discovery; an https
+  connection is never downgraded automatically.
+
 ## 0.4.1 — 2026-10-06
 
 - Pairing screens name the right place in the Darb app: Settings › **Devices** ›

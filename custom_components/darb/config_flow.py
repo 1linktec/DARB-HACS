@@ -13,8 +13,10 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+import aiohttp
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.helpers import selector
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 import voluptuous as vol
 
@@ -72,6 +74,20 @@ async def _key_from(
         return None, "cannot_connect", str(e)
 
 
+async def _usable(hass, url: str) -> bool:
+    """True if the hub answers at `url` with a certificate HA trusts."""
+    try:
+        async with async_get_clientsession(hass).get(
+            url.rstrip("/") + "/health", timeout=aiohttp.ClientTimeout(total=6)
+        ) as r:
+            return r.status == 200
+    except Exception as e:  # TLS not trusted, unreachable, ...
+        _LOGGER.info(
+            "DARB hub's https address %s not usable here (%s); using http", url, e
+        )
+        return False
+
+
 class DarbConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
@@ -121,11 +137,22 @@ class DarbConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """The hub announced itself as _darb._tcp."""
         url = f"http://{discovery_info.host}:{discovery_info.port}"
+        # The hub also advertises its https address (TXT "https"). Use it when it
+        # answers with a certificate HA trusts (a public one, e.g. Let's Encrypt);
+        # a hub on its own or a household CA stays on the LAN http address.
+        https = (discovery_info.properties or {}).get("https")
+        if https and await _usable(self.hass, https):
+            url = https.rstrip("/")
         # Already set up: if the hub's address changed, follow it rather than
         # leaving the entry pointed at the old one. That is the point of
         # discovery — nobody should have to retype an address (architecture §6).
+        # Never downgrade https to http on our own: a passing TLS hiccup must
+        # not quietly move the link off https.
         for entry in self._async_current_entries():
-            if entry.data.get(CONF_URL) != url:
+            old = entry.data.get(CONF_URL) or ""
+            if old != url and not (
+                old.startswith("https://") and url.startswith("http://")
+            ):
                 _LOGGER.info("DARB hub moved to %s; updating", url)
                 self.hass.config_entries.async_update_entry(
                     entry, data={**entry.data, CONF_URL: url}
