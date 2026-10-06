@@ -62,7 +62,9 @@ async def _key_from(
         return key, None, ""
     code = parse_code(text)
     if not code:
-        return None, "no_key", ""
+        # A phone/browser pairing link (#i=...) is the most likely mix-up: the
+        # app makes both, and the link is for a phone, not for Home Assistant.
+        return None, ("phone_link" if "#i=" in (text or "") else "no_key"), ""
     if not url:
         return None, "no_url", ""
     try:
@@ -106,7 +108,7 @@ class DarbConfigFlow(ConfigFlow, domain=DOMAIN):
             url, _ = parse_pairing(user_input[CONF_PAIRING])
             url = (user_input.get(CONF_URL) or "").strip().rstrip("/") or url
             key, err, detail = await _key_from(self.hass, url, user_input[CONF_PAIRING])
-            if err in ("no_key", "code_used"):
+            if err in ("no_key", "code_used", "phone_link"):
                 errors[CONF_PAIRING] = err
             elif err == "no_url":
                 errors[CONF_URL] = err
@@ -177,7 +179,7 @@ class DarbConfigFlow(ConfigFlow, domain=DOMAIN):
             key, err, detail = await _key_from(
                 self.hass, self._url, user_input[CONF_PAIRING]
             )
-            if err in ("no_key", "code_used"):
+            if err in ("no_key", "code_used", "phone_link"):
                 errors[CONF_PAIRING] = err
             elif err:
                 errors["base"] = err
@@ -211,7 +213,7 @@ class DarbConfigFlow(ConfigFlow, domain=DOMAIN):
             key, err, detail = await _key_from(
                 self.hass, entry.data[CONF_URL], user_input[CONF_PAIRING]
             )
-            if err in ("no_key", "code_used"):
+            if err in ("no_key", "code_used", "phone_link"):
                 errors[CONF_PAIRING] = err
             elif err:
                 errors["base"] = err

@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Pair with your DARB hub",
-        "description": "In the Darb app (as an admin): Settings › Devices › Connect Home Assistant › Make code. Enter the code and the hub address the app shows (https when the hub has a trusted certificate).\n\nOr, on the hub, run `sudo darb-pair --ha` and paste the whole line it prints.\n\n{detail}",
+        "description": "In the Darb app (as an admin): Settings › Devices › Connect Home Assistant › Make Home Assistant code. It looks like ABCDE-FGH23. Enter it and the hub address the app shows.\n\nOr on the hub run `sudo darb-pair --ha` — it prints the same kind of code.\n\n{detail}",
         "data": {
           "pairing": "Pairing code",
           "url": "Hub address (the one the app shows with the code)"
@@ -12,14 +12,14 @@
       },
       "pair": {
         "title": "Pair with the DARB hub at {url}",
-        "description": "Found on your network. In the Darb app (as an admin): Settings › Devices › Connect Home Assistant › Make code. Enter the code here.\n\n{detail}",
+        "description": "Found on your network. In the Darb app (as an admin): Settings › Devices › Connect Home Assistant › Make Home Assistant code. It looks like ABCDE-FGH23. Enter it here.\n\nOr on the hub run `sudo darb-pair --ha`.\n\n{detail}",
         "data": {
           "pairing": "Pairing code"
         }
       },
       "reauth_confirm": {
         "title": "Re-pair with DARB",
-        "description": "The hub at {url} no longer accepts Home Assistant's key: it was revoked, replaced by a newer connection, or the hub was reset. In the Darb app (as an admin): Settings › Devices › Connect Home Assistant › Make code. Enter the new code.\n\n{detail}",
+        "description": "The hub at {url} no longer accepts Home Assistant's key: it was revoked, replaced by a newer connection, or the hub was reset. In the Darb app (as an admin): Settings › Devices › Connect Home Assistant › Make Home Assistant code. It looks like ABCDE-FGH23. Enter the new code.\n\n{detail}",
         "data": {
           "pairing": "Pairing code"
         }
@@ -28,9 +28,10 @@
     "error": {
       "cannot_connect": "Could not reach the hub. If the address is https, the hub's certificate must be one Home Assistant trusts (e.g. Let's Encrypt); otherwise use the http address.",
       "invalid_auth": "The hub rejected that key.",
-      "no_key": "That is not a pairing code. It looks like ABCDE-FGH23 and comes from the Darb app (Settings › Devices › Connect Home Assistant).",
+      "no_key": "That is not a Home Assistant code. It looks like ABCDE-FGH23: Darb app › Settings › Devices › Connect Home Assistant.",
       "no_url": "Enter the hub address too: the Darb app shows it with the code.",
-      "code_used": "That code has been used or has expired (codes last 15 minutes, one use). Make a new one in the Darb app."
+      "code_used": "That code has been used or has expired (codes last 15 minutes, one use). Make a new one in the Darb app.",
+      "phone_link": "That is a pairing link for a phone or browser. For Home Assistant use Settings › Devices › Connect Home Assistant in the Darb app: it shows a short code like ABCDE-FGH23."
     },
     "abort": {
       "already_configured": "This DARB hub is already set up.",

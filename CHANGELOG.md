@@ -3,6 +3,12 @@
 Each version here becomes a GitHub release (the `## x.y.z` heading is the tag
 without its `v`), and HACS shows its notes when it offers the update.
 
+## 0.5.2 — 2026-10-06
+
+- Clearer pairing: the screens name the app's **Make Home Assistant code** button,
+  and pasting a phone pairing link (the app makes those too) says so instead of a
+  generic "not a code". `sudo darb-pair --ha` on the hub now prints the same code.
+
 ## 0.5.1 — 2026-10-06
 
 - Passes Home Assistant's own checks again: no web address inside screen text,
