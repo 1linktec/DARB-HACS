@@ -23,6 +23,8 @@ API_FLEET = "/fleet"
 API_NOTIFICATIONS = "/notifications"
 API_APPROVALS = "/approvals"
 API_TASKS = "/tasks"
+# One turn of an HA conversation: DARB is HA's conversation agent (conversation.py).
+API_CONVERSE = "/converse"
 
 # Fired once for every new DARB notification, so an owner routes them however
 # they already route everything else. An event rather than a notify call: we do

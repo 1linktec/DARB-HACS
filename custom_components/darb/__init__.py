@@ -41,7 +41,11 @@ from .coordinator import DarbConfigEntry, DarbCoordinator, DarbData
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
+PLATFORMS: list[Platform] = [
+    Platform.BINARY_SENSOR,
+    Platform.CONVERSATION,
+    Platform.SENSOR,
+]
 
 # Configured through the UI only; this is what hassfest expects when an
 # integration also defines async_setup (for its services).

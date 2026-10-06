@@ -41,7 +41,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: "3.14"
       # Pinned to the floor declared in hacs.json, not to latest. Latest would tell us
       # the code works on HA today and say nothing about the oldest version we promise
       # to support — which is the one that breaks for somebody.
@@ -49,17 +49,12 @@ jobs:
       # Installed against HA's own constraints file, because "pip install
       # homeassistant==X" does NOT reproduce HA's dependency set — pip is free to pull
       # newer transitive versions than HA ever tested, and then a green or red result
-      # is about pip's resolution rather than about us.
-      #
-      # pycares<5 is the case in point, and the reason it is spelled out: HA 2025.6.0
-      # pins aiodns==3.4.0 but puts no ceiling on pycares. pycares 5.0.0 (Jan 2026)
-      # removed ares_query_a_result, which aiodns 3.4.0 still references, so importing
-      # aiohttp — and therefore anything at all — dies. A June 2025 release cannot pin
-      # against a January 2026 break; pinning it here is our job, not theirs. Revisit
-      # when the HA floor moves past an aiodns that supports pycares 5.
+      # is about pip's resolution rather than about us. (The floor was 2025.6.0, which
+      # also needed "pycares<5": its aiodns broke on pycares 5. The conversation agent
+      # in 0.3.0 raised the floor to 2026.9.0 -- the version it was tested on.)
       - run: |
-          pip install "homeassistant==2025.6.0" "pycares<5" \
-            -c https://raw.githubusercontent.com/home-assistant/core/2025.6.0/homeassistant/package_constraints.txt
+          pip install "homeassistant==2026.9.0" \
+            -c https://raw.githubusercontent.com/home-assistant/core/2026.9.0/homeassistant/package_constraints.txt
       # Failures are emitted as ::error:: annotations and into the job summary, not
       # just onto stdout. Job logs need admin rights to download; annotations and the
       # summary are readable by anyone who can see the run, which is the difference

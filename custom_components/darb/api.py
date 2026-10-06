@@ -11,7 +11,14 @@ import aiohttp
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import API_APPROVALS, API_FLEET, API_NOTIFICATIONS, API_TASKS, KEY_PATTERN
+from .const import (
+    API_APPROVALS,
+    API_CONVERSE,
+    API_FLEET,
+    API_NOTIFICATIONS,
+    API_TASKS,
+    KEY_PATTERN,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -64,13 +71,15 @@ class DarbClient:
     def url(self) -> str:
         return self._url
 
-    async def _request(self, method: str, path: str, **kw: Any) -> Any:
+    async def _request(
+        self, method: str, path: str, timeout: float = 10, **kw: Any
+    ) -> Any:
         try:
             async with self._session.request(
                 method,
                 self._url + path,
                 headers=self._headers,
-                timeout=aiohttp.ClientTimeout(total=10),
+                timeout=aiohttp.ClientTimeout(total=timeout),
                 **kw,
             ) as r:
                 if r.status == 401:
@@ -105,3 +114,7 @@ class DarbClient:
 
     async def async_create_task(self, task: dict) -> dict:
         return await self._request("POST", API_TASKS, json=task)
+
+    async def async_converse(self, turn: dict) -> dict:
+        # One model turn on the hub; a small model with tools can take a while.
+        return await self._request("POST", API_CONVERSE, timeout=75, json=turn)
