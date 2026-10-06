@@ -55,6 +55,32 @@ jobs:
       - run: |
           pip install "homeassistant==2026.9.0" \
             -c https://raw.githubusercontent.com/home-assistant/core/2026.9.0/homeassistant/package_constraints.txt
+      # The homeassistant package does not bring each built-in integration's own
+      # libraries: HA installs them when the integration loads. DARB imports the
+      # conversation component (0.3.0), which needs hassil -- so install what our
+      # manifest's dependencies (and theirs) list, read from HA's own manifests.
+      - name: Install what DARB's HA dependencies need
+        run: |
+          REQS=$(python - <<'PY'
+          import json, pathlib, homeassistant
+          comps = pathlib.Path(homeassistant.__file__).parent / "components"
+          ours = json.load(open("custom_components/darb/manifest.json"))
+          todo = list(ours.get("dependencies", [])) + list(ours.get("after_dependencies", []))
+          seen, reqs = set(), set()
+          while todo:
+              d = todo.pop()
+              if d in seen or not (comps / d / "manifest.json").exists():
+                  continue
+              seen.add(d)
+              m = json.load(open(comps / d / "manifest.json"))
+              reqs.update(m.get("requirements", []))
+              todo += m.get("dependencies", [])
+          print(" ".join(sorted(reqs)))
+          PY
+          )
+          echo "installing: $REQS"
+          [ -z "$REQS" ] || pip install $REQS \
+            -c https://raw.githubusercontent.com/home-assistant/core/2026.9.0/homeassistant/package_constraints.txt
       # Failures are emitted as ::error:: annotations and into the job summary, not
       # just onto stdout. Job logs need admin rights to download; annotations and the
       # summary are readable by anyone who can see the run, which is the difference
@@ -144,6 +170,20 @@ jobs:
               missing.append(f"helpers.service_info.zeroconf — {e}")
           from homeassistant.config_entries import ConfigEntries
           need(ConfigEntries, "async_schedule_reload", "follows a hub that moved")
+
+          # The conversation agent (0.3.0) is built on HA's chat log and LLM API;
+          # these moved twice in 2025, so name every piece we touch.
+          import dataclasses
+          from homeassistant.components import conversation
+          from homeassistant.helpers import llm
+          need(conversation.ChatLog, "async_provide_llm_data", "gives the hub HA's Assist tools")
+          need(conversation.ChatLog, "async_add_delta_content_stream", "HA runs the tool calls the hub returns")
+          need(conversation.ChatLog, "unresponded_tool_results", "the turn loop's stop test")
+          need(conversation, "async_get_result_from_chat_log", "the spoken answer")
+          need(conversation, "async_set_agent", "registers DARB as an agent")
+          if "external" not in {f.name for f in dataclasses.fields(llm.ToolInput)}:
+              missing.append("llm.ToolInput.external -- DARB's own lookups come back already run")
+          need(llm, "LLM_API_ASSIST", "the Assist API id")
 
           for m in missing:
               print(f"::error title=HA API gone::{m}")
