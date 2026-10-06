@@ -122,6 +122,14 @@ Each request takes a few seconds (6–11 s on an AGX Orin running qwen3 8B); mos
 of it is the model reading HA's list of exposed entities, so exposing fewer
 entities makes it faster.
 
+## Releases
+
+Versions are GitHub releases, so HACS shows a version and offers updates. To
+release: bump `version` in `custom_components/darb/manifest.json`, add a
+`## x.y.z` section to `CHANGELOG.md`, commit, then push a tag `vx.y.z`. The
+Release workflow checks the three agree and publishes the release with that
+section as its notes.
+
 ## Status
 
 v0.4 polls the hub every 15 s. Planned: an *Expose to DARB* list (HA entities the

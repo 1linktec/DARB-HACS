@@ -1,0 +1,38 @@
+name: Release
+
+# Push a tag like v0.4.0 and GitHub makes the release HACS installs from.
+# The tag must match manifest.json's version, and CHANGELOG.md must have a
+# "## 0.4.0" section -- its text becomes the release notes.
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the tag, the manifest and the changelog agree
+        id: notes
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          VER="${TAG#v}"
+          MAN=$(python3 -c "import json; print(json.load(open('custom_components/darb/manifest.json'))['version'])")
+          if [ "$MAN" != "$VER" ]; then
+            echo "::error::tag $TAG but manifest.json says $MAN -- bump the manifest first"; exit 1
+          fi
+          awk -v v="$VER" '
+            $0 ~ "^## " v "( |$)" {on=1; next}
+            on && /^## / {exit}
+            on {print}' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then
+            echo "::error::CHANGELOG.md has no '## $VER' section"; exit 1
+          fi
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --title "DARB $GITHUB_REF_NAME" --notes-file notes.md --verify-tag
