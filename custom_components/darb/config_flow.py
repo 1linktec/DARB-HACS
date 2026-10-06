@@ -102,6 +102,7 @@ class DarbConfigFlow(ConfigFlow, domain=DOMAIN):
         detail = ""
         data = user_input or {}
         if user_input is not None:
+            await self.async_set_unique_id(DOMAIN)
             url, _ = parse_pairing(user_input[CONF_PAIRING])
             url = (user_input.get(CONF_URL) or "").strip().rstrip("/") or url
             key, err, detail = await _key_from(self.hass, url, user_input[CONF_PAIRING])
@@ -143,6 +144,9 @@ class DarbConfigFlow(ConfigFlow, domain=DOMAIN):
         https = (discovery_info.properties or {}).get("https")
         if https and await _usable(self.hass, https):
             url = https.rstrip("/")
+        # One hub per Home Assistant (single_config_entry): a fixed unique ID lets
+        # HA tell "the same hub again" from a new one.
+        await self.async_set_unique_id(DOMAIN)
         # Already set up: if the hub's address changed, follow it rather than
         # leaving the entry pointed at the old one. That is the point of
         # discovery — nobody should have to retype an address (architecture §6).

@@ -7,7 +7,7 @@
         "description": "In the Darb app (as an admin): Settings › Devices › Connect Home Assistant › Make code. Enter the code and the hub address the app shows (https when the hub has a trusted certificate).\n\nOr, on the hub, run `sudo darb-pair --ha` and paste the whole line it prints.\n\n{detail}",
         "data": {
           "pairing": "Pairing code",
-          "url": "Hub address (the one the app shows, e.g. https://darb.example.com)"
+          "url": "Hub address (the one the app shows with the code)"
         }
       },
       "pair": {
@@ -29,7 +29,7 @@
       "cannot_connect": "Could not reach the hub. If the address is https, the hub's certificate must be one Home Assistant trusts (e.g. Let's Encrypt); otherwise use the http address.",
       "invalid_auth": "The hub rejected that key.",
       "no_key": "That is not a pairing code. It looks like ABCDE-FGH23 and comes from the Darb app (Settings › Devices › Connect Home Assistant).",
-      "no_url": "Enter the hub address too, e.g. http://192.168.1.20:8080 (the Darb app shows it with the code).",
+      "no_url": "Enter the hub address too: the Darb app shows it with the code.",
       "code_used": "That code has been used or has expired (codes last 15 minutes, one use). Make a new one in the Darb app."
     },
     "abort": {
