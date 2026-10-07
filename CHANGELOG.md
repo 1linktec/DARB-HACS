@@ -3,6 +3,13 @@
 Each version here becomes a GitHub release (the `## x.y.z` heading is the tag
 without its `v`), and HACS shows its notes when it offers the update.
 
+## 0.9.1 — 2026-10-07
+
+- Sends the exposed devices to the hub again once Home Assistant has finished
+  starting: at start-up only the devices already loaded were sent (9 of 21 here).
+- Voice plumbing exposed to Assist (the wake word engine and the like) is not
+  treated as a device.
+
 ## 0.9.0 — 2026-10-07
 
 - **DARB follows Home Assistant's own exposure.** Whatever is exposed to Assist

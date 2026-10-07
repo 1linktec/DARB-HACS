@@ -30,6 +30,7 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import llm
+from homeassistant.helpers.start import async_at_started
 from homeassistant.helpers.typing import ConfigType
 import voluptuous as vol
 
@@ -159,6 +160,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: DarbConfigEntry) -> bool
     entry.runtime_data.home = HomeSync(hass, client, exposure)
     await entry.runtime_data.home.async_start()
     home = entry.runtime_data.home
+
+    # At HA's start, devices from slower integrations are not there yet: send
+    # the full list again once HA has finished starting (measured 7 Oct: 9 of
+    # 21 exposed devices reached the hub without this).
+    async def _started(_hass: HomeAssistant) -> None:
+        await home.async_exposure_changed()
+
+    entry.async_on_unload(async_at_started(hass, _started))
     entry.async_on_unload(
         async_listen_entity_updates(
             hass,

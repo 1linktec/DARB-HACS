@@ -62,6 +62,16 @@ from .guard import GUARDED_CLASSES, GUARDED_DOMAINS
 _LOGGER = logging.getLogger(__name__)
 
 API_ID = "darb_home"
+# Voice plumbing, not devices (HA exposes its wake word engine, for one).
+NOT_DEVICES = {
+    "wake_word",
+    "stt",
+    "tts",
+    "conversation",
+    "assist_satellite",
+    "ai_task",
+}
+
 # Seen, never changed: nothing to switch on these.
 READ_ONLY_DOMAINS = {
     "sensor",
@@ -207,7 +217,8 @@ class Exposure:
         see = {
             eid
             for eid in hass.states.async_entity_ids()
-            if async_should_expose(hass, "conversation", eid)
+            if eid.split(".", 1)[0] not in NOT_DEVICES
+            and async_should_expose(hass, "conversation", eid)
         }
         control = {e for e in see if e.split(".", 1)[0] not in READ_ONLY_DOMAINS}
         return cls(see=see, control=control)
