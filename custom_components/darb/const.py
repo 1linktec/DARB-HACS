@@ -25,6 +25,9 @@ API_APPROVALS = "/approvals"
 API_TASKS = "/tasks"
 # One turn of an HA conversation: DARB is HA's conversation agent (conversation.py).
 API_CONVERSE = "/converse"
+# The same turn, streamed as it is written (NDJSON), so HA speaks the first words
+# before the answer is finished (voice plan phase 1).
+API_CONVERSE_STREAM = "/converse/stream"
 # Trade a one-time pairing code from the Darb app for HA's own key (no key needed).
 API_REDEEM = "/clients/redeem"
 # Expose to DARB: the entities this HA lets DARB see/control, and the HA actions

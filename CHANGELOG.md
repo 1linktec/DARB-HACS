@@ -3,6 +3,16 @@
 Each version here becomes a GitHub release (the `## x.y.z` heading is the tag
 without its `v`), and HACS shows its notes when it offers the update.
 
+## 0.7.0 — 2026-10-06
+
+- **Streaming replies**: DARB's answer streams into Home Assistant as it is
+  written, so speech starts on the first words instead of after the whole answer.
+- Device commands are confirmed in one round ("Done: Kitchen lights off.") -- the
+  hub no longer asks its model a second time.
+- Measured end to end in HA 2026.9.4 with the hub at full power: "turn off the
+  kitchen lights" 1.9 s (was 9-12 s), a sensor question 0.9 s (was 6 s).
+- Needs a DARB hub with /converse/stream; an older hub is used turn by turn.
+
 ## 0.6.0 — 2026-10-06
 
 - **Expose to DARB** (Configure on the DARB integration): DARB's own list of devices

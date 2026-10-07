@@ -40,7 +40,7 @@ try:  # HA 2026.x converts tool schemas with probatio; earlier with voluptuous_o
 except ImportError:  # pragma: no cover
     from voluptuous_openapi import convert as to_openapi
 
-from .api import DarbError
+from .api import DarbError, DarbNoStream
 from .const import DOMAIN
 from .coordinator import DarbConfigEntry
 from .entity import HUB_DEVICE_ID
@@ -113,6 +113,8 @@ class DarbConversationEntity(conversation.ConversationEntity):
     _attr_has_entity_name = True
     _attr_name = None
     _attr_supported_features = conversation.ConversationEntityFeature.CONTROL
+    # The hub streams the reply; HA starts speaking on the first words.
+    _attr_supports_streaming = True
 
     def __init__(self, entry: DarbConfigEntry) -> None:
         self.entry = entry
@@ -170,17 +172,28 @@ class DarbConversationEntity(conversation.ConversationEntity):
         client = self.entry.runtime_data.client
 
         for _ in range(MAX_ROUNDS):
+            turn = {
+                "messages": [_as_message(c) for c in chat_log.content],
+                "ha_tools": tools,
+                "guarded": guarded,
+                "conversation_id": chat_log.conversation_id,
+                "language": user_input.language,
+                "speaker": speaker,
+            }
+            if self._streams:
+                try:
+                    async for _content in chat_log.async_add_delta_content_stream(
+                        self.entity_id, self._stream_deltas(client, turn, guarded)
+                    ):
+                        pass
+                except DarbNoStream:
+                    self._streams = False  # an older hub: whole turns from now on
+                else:
+                    if not chat_log.unresponded_tool_results:
+                        break
+                    continue
             try:
-                reply = await client.async_converse(
-                    {
-                        "messages": [_as_message(c) for c in chat_log.content],
-                        "ha_tools": tools,
-                        "guarded": guarded,
-                        "conversation_id": chat_log.conversation_id,
-                        "language": user_input.language,
-                        "speaker": speaker,
-                    }
-                )
+                reply = await client.async_converse(turn)
             except DarbError as err:
                 _LOGGER.warning("DARB hub did not answer: %s", err)
                 response = intent.IntentResponse(language=user_input.language)
@@ -199,6 +212,69 @@ class DarbConversationEntity(conversation.ConversationEntity):
                 break
 
         return conversation.async_get_result_from_chat_log(user_input, chat_log)
+
+    _streams = True
+
+    async def _stream_deltas(
+        self, client, turn: dict, guarded: list[dict]
+    ) -> AsyncGenerator[dict[str, Any]]:
+        """One hub turn as it is written: text as deltas (HA speaks once 60
+        characters, or text and then a tool call, have arrived), then the tool
+        calls and the results the hub already has."""
+        started = False
+        try:
+            async for ev in client.async_converse_stream(turn):
+                if not started:
+                    started = True
+                    yield {"role": "assistant"}
+                if ev.get("delta"):
+                    yield {"content": ev["delta"]}
+                elif "done" in ev:
+                    calls, done = self._calls(ev["done"], guarded)
+                    if calls:
+                        yield {"tool_calls": calls}
+                    for d in done:
+                        yield d
+        except DarbNoStream:
+            raise
+        except DarbError as err:
+            _LOGGER.warning("DARB hub stream failed: %s", err)
+            if not started:
+                yield {"role": "assistant"}
+            yield {"content": " I lost the connection to the DARB hub."}
+
+    def _calls(self, reply: dict[str, Any], guarded: list[dict]):
+        """(ToolInputs, tool_result deltas for the calls the hub already ran)."""
+        calls, done = [], []
+        for c in reply.get("tool_calls") or []:
+            name, args = str(c.get("name") or ""), c.get("args") or {}
+            external, result = bool(c.get("external")), c.get("result")
+            if not external and (why := guard_refusal(name, args, guarded)):
+                # The hub let it through; this side does not.
+                _LOGGER.warning(
+                    "refused %s(%s) from the hub: guarded entity", name, args
+                )
+                external, result = True, {"error": "refused", "error_text": why}
+            calls.append(
+                llm.ToolInput(
+                    tool_name=name,
+                    tool_args=args,
+                    id=str(c.get("id")),
+                    external=external,
+                )
+            )
+            if external:
+                done.append(
+                    {
+                        "role": "tool_result",
+                        "tool_call_id": str(c.get("id")),
+                        "tool_name": name,
+                        "tool_result": result
+                        if isinstance(result, dict)
+                        else {"result": result},
+                    }
+                )
+        return calls, done
 
     async def _deltas(
         self, reply: dict[str, Any], guarded: list[dict]

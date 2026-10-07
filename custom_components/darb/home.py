@@ -296,6 +296,31 @@ async def execute(
     return True, f"{st.name if st else entity_id}: {act} done", st.state if st else None
 
 
+DONE_WORDS = {
+    "on": "on",
+    "off": "off",
+    "toggle": "switched",
+    "open": "open",
+    "close": "closed",
+    "stop": "stopped",
+    "lock": "locked",
+    "unlock": "unlocked",
+    "play": "playing",
+    "pause": "paused",
+    "arm": "armed",
+}
+
+
+def spoken(hass: HomeAssistant, entity_id: str, action: str, value: Any) -> str:
+    """What the hub says after a device action worked: "Kitchen lights off"."""
+    st = hass.states.get(entity_id)
+    name = st.name if st else entity_id
+    act = normalise_action(action)
+    if act == "set":
+        return f"{name} set to {value}"
+    return f"{name} {DONE_WORDS.get(act, act)}"
+
+
 # ------------------------------------------------------------------ LLM API --
 
 
@@ -390,7 +415,14 @@ class HomeAction(llm.Tool):
             a.get("value"),
             llm_context.context,
         )
-        return {"ok": ok, "result": said, "state": state}
+        return {
+            "ok": ok,
+            "result": said,
+            "state": state,
+            "say": spoken(hass, eid, str(a.get("action") or ""), a.get("value"))
+            if ok
+            else None,
+        }
 
 
 @dataclass(slots=True, kw_only=True)

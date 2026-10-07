@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 from typing import Any
@@ -14,6 +15,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .const import (
     API_APPROVALS,
     API_CONVERSE,
+    API_CONVERSE_STREAM,
     API_FLEET,
     API_HA_ACTIONS,
     API_HA_ENTITIES,
@@ -28,6 +30,10 @@ _LOGGER = logging.getLogger(__name__)
 
 class DarbError(Exception):
     """Any DARB API failure."""
+
+
+class DarbNoStream(DarbError):
+    """The hub has no /converse/stream (older than the voice plan's phase 1)."""
 
 
 class DarbAuthError(DarbError):
@@ -157,6 +163,30 @@ class DarbClient:
 
     async def async_create_task(self, task: dict) -> dict:
         return await self._request("POST", API_TASKS, json=task)
+
+    async def async_converse_stream(self, turn: dict):
+        """One turn, streamed: yields {"delta": text}... then {"done": {...}}.
+        Raises DarbNoStream on a hub that predates /converse/stream."""
+        try:
+            async with self._session.post(
+                self._url + API_CONVERSE_STREAM,
+                headers=self._headers,
+                json=turn,
+                timeout=aiohttp.ClientTimeout(total=90, sock_read=60),
+            ) as r:
+                if r.status == 404:
+                    raise DarbNoStream
+                if r.status == 401:
+                    raise DarbAuthError("the hub rejected this key")
+                if r.status >= 400:
+                    raise DarbError(f"{r.status}: {r.reason}")
+                async for line in r.content:
+                    if line.strip():
+                        yield json.loads(line)
+        except DarbError:
+            raise
+        except Exception as e:  # network / timeout / bad line
+            raise DarbError(str(e) or type(e).__name__) from e
 
     async def async_converse(self, turn: dict) -> dict:
         # One model turn on the hub; a small model with tools can take a while.
