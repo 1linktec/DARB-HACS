@@ -59,7 +59,7 @@ _LOGGER = logging.getLogger(__name__)
 API_ID = "darb_home"
 OPT_SEE = "see"
 OPT_CONTROL = "control"
-ACTION_POLL = timedelta(seconds=5)
+ACTION_WAIT = 25  # seconds the hub may hold each poll open
 FULL_PUSH = timedelta(minutes=10)
 DROP_ATTRS = {
     "entity_picture",
@@ -470,14 +470,14 @@ class HomeSync:
         self._unsubs: list[Callable[[], None]] = []
         self._dirty: set[str] = set()
         self._flush: asyncio.TimerHandle | None = None
-        self._busy = False
+        self._task: asyncio.Task | None = None
 
     async def async_start(self) -> None:
         await self.push_all()
         self.track()
         self._unsubs.append(async_track_time_interval(self.hass, self._full, FULL_PUSH))
-        self._unsubs.append(
-            async_track_time_interval(self.hass, self._poll, ACTION_POLL)
+        self._task = self.hass.async_create_background_task(
+            self._actions(), "darb_ha_actions"
         )
 
     def track(self) -> None:
@@ -490,6 +490,8 @@ class HomeSync:
             )
 
     async def async_stop(self) -> None:
+        if self._task:
+            self._task.cancel()
         for u in self._unsubs:
             u()
         self._unsubs.clear()
@@ -529,12 +531,21 @@ class HomeSync:
     async def _full(self, _now=None) -> None:
         await self.push_all()
 
-    async def _poll(self, _now=None) -> None:
-        if self._busy:
-            return
-        self._busy = True
-        try:
-            actions = await self.client.async_claim_actions()
+    async def _actions(self) -> None:
+        """Collect the Bot Herder's HA actions over a long poll: the hub answers
+        the moment one is queued, so a voice command reaches the device at once
+        (it waited up to 5 s on a timed poll)."""
+        while True:
+            started = self.hass.loop.time()
+            try:
+                actions = await self.client.async_claim_actions(wait=ACTION_WAIT)
+            except DarbError as e:
+                _LOGGER.debug("DARB: action poll failed: %s", e)
+                await asyncio.sleep(5)
+                continue
+            if not actions and self.hass.loop.time() - started < 1:
+                # A hub older than the long poll answers at once: poll gently.
+                await asyncio.sleep(5)
             for a in actions:
                 ok, said, state = await execute(
                     self.hass,
@@ -545,8 +556,9 @@ class HomeSync:
                     Context(),
                 )
                 _LOGGER.info("DARB task %s: %s", a.get("id"), said)
-                await self.client.async_action_result(str(a["id"]), ok, said, state)
-        except DarbError as e:
-            _LOGGER.debug("DARB: action poll failed: %s", e)
-        finally:
-            self._busy = False
+                try:
+                    await self.client.async_action_result(str(a["id"]), ok, said, state)
+                except DarbError as e:
+                    _LOGGER.warning(
+                        "DARB: could not report task %s: %s", a.get("id"), e
+                    )

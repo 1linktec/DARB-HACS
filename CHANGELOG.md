@@ -3,6 +3,14 @@
 Each version here becomes a GitHub release (the `## x.y.z` heading is the tag
 without its `v`), and HACS shows its notes when it offers the update.
 
+## 0.8.0 — 2026-10-06
+
+- **Device actions from DARB arrive at once.** The integration keeps one long
+  request open to the hub, which answers the moment the Bot Herder queues an HA
+  action (it was a 5-second timed poll). This is what lets "turn off the kitchen
+  lights", said to DARB in the Darb app, happen as you finish saying it.
+- A hub older than this release is still polled every 5 seconds.
+
 ## 0.7.0 — 2026-10-06
 
 - **Streaming replies**: DARB's answer streams into Home Assistant as it is

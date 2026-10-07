@@ -201,8 +201,11 @@ class DarbClient:
             json={"full": full, "entities": entities},
         )
 
-    async def async_claim_actions(self) -> list[dict]:
-        return await self._request("GET", API_HA_ACTIONS)
+    async def async_claim_actions(self, wait: float = 0) -> list[dict]:
+        # A long poll: the hub answers the moment an action is queued.
+        return await self._request(
+            "GET", API_HA_ACTIONS, timeout=wait + 15, params={"wait": wait}
+        )
 
     async def async_action_result(
         self, task_id: str, ok: bool, detail: str | None, state: str | None

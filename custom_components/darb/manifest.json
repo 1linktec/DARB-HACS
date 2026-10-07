@@ -18,7 +18,7 @@
   "issue_tracker": "https://github.com/1linktec/darb-hacs/issues",
   "requirements": [],
   "single_config_entry": true,
-  "version": "0.7.0",
+  "version": "0.8.0",
   "zeroconf": [
     "_darb._tcp.local."
   ]
