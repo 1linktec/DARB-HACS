@@ -238,17 +238,8 @@ def describe(
     state = hass.states.get(entity_id)
     if state is None:
         return None
-    ents, devs = er.async_get(hass), dr.async_get(hass)
-    entry = ents.async_get(entity_id)
-    area_id = entry.area_id if entry else None
-    if (
-        entry
-        and not area_id
-        and entry.device_id
-        and (dev := devs.async_get(entry.device_id))
-    ):
-        area_id = dev.area_id
-    area = ar.async_get(hass).async_get_area(area_id) if area_id else None
+    entry = er.async_get(hass).async_get(entity_id)
+    area = area_of(hass, entity_id)
     floor = (
         fr.async_get(hass).async_get_floor(area.floor_id)
         if area and area.floor_id
@@ -272,33 +263,146 @@ def describe(
     }
 
 
-def find(hass: HomeAssistant, exp: Exposure, name: str) -> str | None:
-    """An exposed entity by id, name or alias (exact, then a unique partial name)."""
-    q = (name or "").strip().lower()
-    for lead in ("the ", "my ", "our "):
+# Words for a kind of device in a request: "the living room lights".
+KIND_WORDS = {
+    "light": "light",
+    "lights": "light",
+    "lamp": "light",
+    "lamps": "light",
+    "switch": "switch",
+    "switches": "switch",
+    "plug": "switch",
+    "plugs": "switch",
+    "fan": "fan",
+    "fans": "fan",
+    "blind": "cover",
+    "blinds": "cover",
+    "shade": "cover",
+    "shades": "cover",
+    "cover": "cover",
+    "covers": "cover",
+    "curtain": "cover",
+    "curtains": "cover",
+    "heat": "climate",
+    "heating": "climate",
+    "thermostat": "climate",
+}
+LEADS = ("all of the ", "all the ", "all ", "the ", "my ", "our ", "every ")
+
+
+def _norm(text: str) -> str:
+    """Lower case, no spaces, no punctuation: 'Living Room' == 'livingroom'."""
+    return "".join(ch for ch in text.lower() if ch.isalnum())
+
+
+def area_of(hass: HomeAssistant, entity_id: str) -> ar.AreaEntry | None:
+    entry = er.async_get(hass).async_get(entity_id)
+    area_id = entry.area_id if entry else None
+    if (
+        entry
+        and not area_id
+        and entry.device_id
+        and (dev := dr.async_get(hass).async_get(entry.device_id))
+    ):
+        area_id = dev.area_id
+    return ar.async_get(hass).async_get_area(area_id) if area_id else None
+
+
+def resolve(hass: HomeAssistant, exp: Exposure, name: str) -> list[str]:
+    """Exposed entities a spoken name means, as Home Assistant's own intents
+    read it: an entity id; a device's name or alias (spaces ignored); an area,
+    optionally with a kind ("living room lights", "the kitchen"); "all the
+    lights"; else a unique partial name. Empty when nothing (or too much) fits."""
+    q = (name or "").strip().lower().rstrip(".!?")
+    if q in exp.see:
+        return [q]
+    for lead in LEADS:
         if q.startswith(lead):
             q = q[len(lead) :]
+            break
     if not q:
-        return None
-    if q in exp.see:
-        return q
-    exact, partial = [], []
+        return []
+    nq, spoken_q = _norm(q), " ".join(q.split())
     ents = er.async_get(hass)
+    exact, spaceless, partial = [], [], []
     for eid in exp.see:
         st = hass.states.get(eid)
         entry = ents.async_get(eid)
-        names = {(st.name if st else "").lower()} | {
-            a.lower() for a in (entry.aliases if entry else []) if isinstance(a, str)
-        }
-        if q in names:
+        raw = [st.name if st else ""] + [
+            a for a in (entry.aliases if entry else []) if isinstance(a, str)
+        ]
+        if spoken_q in {" ".join(n.lower().split()) for n in raw}:
             exact.append(eid)
-        elif st and q in st.name.lower():
+        elif nq in {_norm(n) for n in raw}:
+            spaceless.append(eid)
+        elif st and nq in _norm(st.name):
             partial.append(eid)
+    # 1. A device called exactly that.
     if len(exact) == 1:
-        return exact[0]
-    if not exact and len(partial) == 1:
-        return partial[0]
-    return None
+        return exact
+    # 2. An area, with or without a kind of device (Home Assistant reads
+    #    "living room lights" as the Living Room's lights, so do we).
+    words = q.split()
+    kind = KIND_WORDS.get(words[-1]) if words else None
+    place = _norm(" ".join(words[:-1] if kind else words))
+    asked_all = name.strip().lower().startswith(("all", "every"))
+    if place or kind:
+        hits = []
+        for eid in exp.control:
+            if kind and eid.split(".", 1)[0] != kind:
+                continue
+            if place:
+                area = area_of(hass, eid)
+                if area is None or place not in {_norm(area.name)} | {
+                    _norm(a) for a in area.aliases
+                }:
+                    continue
+            hits.append(eid)
+        if hits and (place or asked_all):
+            return sorted(hits)
+    if kind and not place:
+        return []  # "lights" alone: which ones?
+    # 3. The name with spaces ignored ("livingroom" = "living room"), then a
+    #    unique partial name.
+    if len(spaceless) == 1:
+        return spaceless
+    if not exact and not spaceless and len(partial) == 1:
+        return partial
+    return []
+
+
+async def act(
+    hass: HomeAssistant,
+    exp: Exposure,
+    name: str,
+    action: str,
+    value: Any,
+    context: Context | None = None,
+) -> tuple[bool, str, str | None, str | None]:
+    """Do `action` to whatever `name` means (one device, or an area's devices).
+    (ok, what happened, state afterwards, a sentence to say)."""
+    targets = resolve(hass, exp, name)
+    if not targets:
+        return False, f"No exposed device or area matches {name!r}.", None, None
+    if len(targets) == 1:
+        ok, said, state = await execute(hass, exp, targets[0], action, value, context)
+        return ok, said, state, spoken(hass, targets[0], action, value) if ok else None
+    results = [await execute(hass, exp, eid, action, value, context) for eid in targets]
+    done = [eid for eid, r in zip(targets, results, strict=True) if r[0]]
+    said = "; ".join(r[1] for r in results)
+    if not done:
+        return False, said, None, None
+    act_ = normalise_action(action)
+    word = DONE_WORDS.get(act_, act_)
+    what = name.strip().rstrip(".!?")
+    for lead in LEADS:
+        if what.lower().startswith(lead):
+            what = what[len(lead) :]
+            break
+    say = f"{what[:1].upper()}{what[1:]} {word}" + (
+        f" ({len(done)} of {len(targets)})" if len(done) < len(targets) else ""
+    )
+    return True, said, None, say
 
 
 async def execute(
@@ -418,7 +522,8 @@ class GetHomeState(llm.Tool):
 class HomeAction(llm.Tool):
     name = "HomeAction"
     description = (
-        "Change a Home Assistant device exposed to DARB to control. "
+        "Change Home Assistant devices DARB may control. name: a device, or an "
+        "area with a kind ('living room lights', 'kitchen'), or 'all the lights'. "
         "action: on, off, toggle, open, close, "
         "stop, lock, unlock, set, play, pause; "
         "value: a number for set (brightness %, position, "
@@ -439,28 +544,17 @@ class HomeAction(llm.Tool):
         self, hass, tool_input: llm.ToolInput, llm_context: llm.LLMContext
     ) -> JsonObjectType:
         a = tool_input.tool_args
-        eid = find(hass, self.exp, str(a.get("name") or ""))
-        if eid is None:
-            return {
-                "error": "unknown device",
-                "error_text": f"No single exposed device is called {a.get('name')!r}.",
-            }
-        ok, said, state = await execute(
+        ok, said, state, say = await act(
             hass,
             self.exp,
-            eid,
+            str(a.get("name") or ""),
             str(a.get("action") or ""),
             a.get("value"),
             llm_context.context,
         )
-        return {
-            "ok": ok,
-            "result": said,
-            "state": state,
-            "say": spoken(hass, eid, str(a.get("action") or ""), a.get("value"))
-            if ok
-            else None,
-        }
+        if not ok and say is None and said.startswith("No exposed"):
+            return {"error": "unknown device", "error_text": said}
+        return {"ok": ok, "result": said, "state": state, "say": say}
 
 
 @dataclass(slots=True, kw_only=True)
@@ -595,7 +689,7 @@ class HomeSync:
                 # A hub older than the long poll answers at once: poll gently.
                 await asyncio.sleep(5)
             for a in actions:
-                ok, said, state = await execute(
+                ok, said, state, _say = await act(
                     self.hass,
                     self.exposure(),
                     str(a.get("entity_id") or ""),

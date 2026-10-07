@@ -3,6 +3,15 @@
 Each version here becomes a GitHub release (the `## x.y.z` heading is the tag
 without its `v`), and HACS shows its notes when it offers the update.
 
+## 0.10.0 — 2026-10-07
+
+- **Areas.** "Turn off the living room lights" turns off every exposed light in
+  HA's Living Room area; "turn off the kitchen" everything DARB may change there;
+  "all the lights" every exposed light. Area aliases count too.
+- Names match without caring about spaces or case ("livingroom" = "Living Room").
+- Device actions DARB sends from the app (not only from HA's own voice) find the
+  device or area the same way -- before, they needed the exact entity id.
+
 ## 0.9.1 — 2026-10-07
 
 - Sends the exposed devices to the hub again once Home Assistant has finished
