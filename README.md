@@ -132,9 +132,11 @@ section as its notes.
 
 ## Status
 
-v0.4 polls the hub every 15 s. Planned: an *Expose to DARB* list (HA entities the
-planner may reason over), HA's own robots as DARB bodies, presence for people,
-camera entities, and a push channel.
+DARB sees exactly what Home Assistant exposes to Assist (Settings › Voice
+assistants › Expose), like any other assistant: read-only kinds (sensors, people,
+weather) are seen, the rest may also be changed. Locks, alarm panels, garage
+doors and gates are never opened by voice. Planned: HA's own robots as DARB
+bodies, presence for people, camera entities.
 
 Requires Home Assistant **2026.9.0** or later (the conversation agent uses HA's
 current chat-log and LLM APIs). Tested end to end against **2026.9.2**: pairing,

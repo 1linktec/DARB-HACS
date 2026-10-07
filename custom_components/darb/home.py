@@ -1,8 +1,10 @@
-"""Expose to DARB: the Home Assistant devices DARB may see, or see and control.
+"""The Home Assistant devices DARB may see, or see and control.
 
-Jeff's decisions (6 Oct 2026): DARB has its OWN exposure list -- separate from
-what HA's Assist agents see -- set in this integration's options, each entity
-"see" or "see and control". This module:
+DARB follows Home Assistant's own exposure (Jeff, 7 Oct 2026, replacing the
+separate "Expose to DARB" list of 6 Oct): whatever is exposed to Assist under
+Settings > Voice assistants > Expose is what DARB sees, as with any assistant.
+Sensors and other read-only kinds are seen; lights, switches, covers, climate
+and the rest may also be changed. This module:
 
 - gives DARB's voice agent tools over exactly those entities (an LLM API of
   its own, `darb_home`), instead of HA's Assist exposure;
@@ -26,6 +28,9 @@ import json
 import logging
 from typing import Any
 
+from homeassistant.components.homeassistant.exposed_entities import (
+    async_should_expose,
+)
 from homeassistant.core import Context, Event, HomeAssistant, State, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import (
@@ -57,8 +62,24 @@ from .guard import GUARDED_CLASSES, GUARDED_DOMAINS
 _LOGGER = logging.getLogger(__name__)
 
 API_ID = "darb_home"
-OPT_SEE = "see"
-OPT_CONTROL = "control"
+# Seen, never changed: nothing to switch on these.
+READ_ONLY_DOMAINS = {
+    "sensor",
+    "binary_sensor",
+    "person",
+    "device_tracker",
+    "weather",
+    "zone",
+    "sun",
+    "calendar",
+    "event",
+    "image",
+    "camera",
+    "update",
+    "geo_location",
+    "air_quality",
+    "todo",
+}
 ACTION_WAIT = 25  # seconds the hub may hold each poll open
 FULL_PUSH = timedelta(minutes=10)
 DROP_ATTRS = {
@@ -181,9 +202,15 @@ class Exposure:
     control: set[str]
 
     @classmethod
-    def of(cls, options: dict) -> Exposure:
-        control = set(options.get(OPT_CONTROL) or [])
-        return cls(see=set(options.get(OPT_SEE) or []) | control, control=control)
+    def from_ha(cls, hass: HomeAssistant) -> Exposure:
+        """What Home Assistant exposes to Assist (the "conversation" assistant)."""
+        see = {
+            eid
+            for eid in hass.states.async_entity_ids()
+            if async_should_expose(hass, "conversation", eid)
+        }
+        control = {e for e in see if e.split(".", 1)[0] not in READ_ONLY_DOMAINS}
+        return cls(see=see, control=control)
 
 
 def guarded(state: State | None, entity_id: str) -> bool:
@@ -471,6 +498,7 @@ class HomeSync:
         self._dirty: set[str] = set()
         self._flush: asyncio.TimerHandle | None = None
         self._task: asyncio.Task | None = None
+        self._tracker: Callable[[], None] | None = None
 
     async def async_start(self) -> None:
         await self.push_all()
@@ -481,13 +509,19 @@ class HomeSync:
         )
 
     def track(self) -> None:
+        if self._tracker:
+            self._tracker()
+            self._tracker = None
         exp = self.exposure()
         if exp.see:
-            self._unsubs.append(
-                async_track_state_change_event(
-                    self.hass, sorted(exp.see), self._changed
-                )
+            self._tracker = async_track_state_change_event(
+                self.hass, sorted(exp.see), self._changed
             )
+
+    async def async_exposure_changed(self) -> None:
+        """Something was exposed or unexposed in HA: follow it at once."""
+        self.track()
+        await self.push_all()
 
     async def async_stop(self) -> None:
         if self._task:
@@ -495,6 +529,9 @@ class HomeSync:
         for u in self._unsubs:
             u()
         self._unsubs.clear()
+        if self._tracker:
+            self._tracker()
+            self._tracker = None
         if self._flush:
             self._flush.cancel()
 

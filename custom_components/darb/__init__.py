@@ -15,6 +15,9 @@ from __future__ import annotations
 
 import logging
 
+from homeassistant.components.homeassistant.exposed_entities import (
+    async_listen_entity_updates,
+)
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import Platform
 from homeassistant.core import (
@@ -139,32 +142,33 @@ async def async_setup_entry(hass: HomeAssistant, entry: DarbConfigEntry) -> bool
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = DarbData(client=client, coordinator=coordinator)
 
-    # Expose to DARB (Jeff, 6 Oct): DARB's own list of entities it may see or
-    # control -- its voice tools, the hub's planning context, and HA actions.
+    # DARB sees what HA exposes to Assist (Jeff, 7 Oct) -- its voice tools, the
+    # hub's planning context, and HA actions all follow that one list.
     def exposure() -> Exposure:
-        return Exposure.of(dict(entry.options))
+        return Exposure.from_ha(hass)
 
     entry.runtime_data.unregister_api = llm.async_register_api(
         hass,
         DarbHomeApi(
             hass=hass,
             id=API_ID,
-            name="DARB (devices exposed to DARB)",
+            name="DARB (devices exposed to Assist)",
             exposure=exposure,
         ),
     )
     entry.runtime_data.home = HomeSync(hass, client, exposure)
     await entry.runtime_data.home.async_start()
-    entry.async_on_unload(entry.add_update_listener(_options_changed))
+    home = entry.runtime_data.home
+    entry.async_on_unload(
+        async_listen_entity_updates(
+            hass,
+            "conversation",
+            lambda: hass.async_create_task(home.async_exposure_changed()),
+        )
+    )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
-
-
-async def _options_changed(hass: HomeAssistant, entry: DarbConfigEntry) -> None:
-    """A new Expose-to-DARB list: reload, so the tools, the push and the
-    tracked entities all follow it."""
-    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: DarbConfigEntry) -> bool:

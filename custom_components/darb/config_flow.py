@@ -15,12 +15,9 @@ from typing import Any
 
 import aiohttp
 from homeassistant.config_entries import (
-    ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
-    OptionsFlow,
 )
-from homeassistant.core import callback
 from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
@@ -36,7 +33,6 @@ from .api import (
     parse_pairing,
 )
 from .const import CONF_KEY, CONF_PAIRING, CONF_URL, DOMAIN
-from .home import OPT_CONTROL, OPT_SEE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -99,11 +95,6 @@ async def _usable(hass, url: str) -> bool:
 
 class DarbConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
-
-    @staticmethod
-    @callback
-    def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
-        return DarbOptionsFlow()
 
     def __init__(self) -> None:
         self._url: str | None = None
@@ -242,33 +233,4 @@ class DarbConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema({vol.Required(CONF_PAIRING): PAIRING_SELECTOR}),
             errors=errors,
             description_placeholders={"url": entry.data[CONF_URL], "detail": detail},
-        )
-
-
-class DarbOptionsFlow(OptionsFlow):
-    """Expose to DARB (Jeff, 6 Oct): the devices DARB may see, and the ones it
-    may also change. Separate from what HA's own Assist agents see."""
-
-    async def async_step_init(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        if user_input is not None:
-            return self.async_create_entry(
-                data={
-                    OPT_SEE: list(user_input.get(OPT_SEE) or []),
-                    OPT_CONTROL: list(user_input.get(OPT_CONTROL) or []),
-                }
-            )
-        opts = self.config_entry.options
-        pick = selector.EntitySelector(selector.EntitySelectorConfig(multiple=True))
-        return self.async_show_form(
-            step_id="init",
-            data_schema=vol.Schema(
-                {
-                    vol.Optional(OPT_SEE, default=list(opts.get(OPT_SEE, []))): pick,
-                    vol.Optional(
-                        OPT_CONTROL, default=list(opts.get(OPT_CONTROL, []))
-                    ): pick,
-                }
-            ),
         )

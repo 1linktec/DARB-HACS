@@ -159,7 +159,7 @@ class DarbConversationEntity(conversation.ConversationEntity):
             }
             for t in (api.tools if api else [])
         ]
-        guarded = guarded_entities(self.hass, Exposure.of(dict(self.entry.options)))
+        guarded = guarded_entities(self.hass, Exposure.from_ha(self.hass))
         user = None
         if user_input.context.user_id:
             u = await self.hass.auth.async_get_user(user_input.context.user_id)

@@ -109,21 +109,5 @@
         }
       }
     }
-  },
-  "options": {
-    "step": {
-      "init": {
-        "title": "Expose to DARB",
-        "description": "The devices DARB may know about. DARB uses them in conversations, for planning (who is home, doors, temperatures), and in tasks the Bot Herder runs. This list is DARB's own: it does not change what Home Assistant's other assistants see.\n\nLocks, alarm panels, garage doors and gates can be controlled only with a person's approval in the Darb app, never by voice alone.",
-        "data": {
-          "see": "DARB may see (state only)",
-          "control": "DARB may see and change"
-        },
-        "data_description": {
-          "see": "Sensors, people, doors, weather: DARB reads them but never changes them.",
-          "control": "Lights, switches, covers, climate...: DARB may also turn them on, off, open or set."
-        }
-      }
-    }
   }
 }

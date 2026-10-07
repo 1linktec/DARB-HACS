@@ -3,6 +3,17 @@
 Each version here becomes a GitHub release (the `## x.y.z` heading is the tag
 without its `v`), and HACS shows its notes when it offers the update.
 
+## 0.9.0 — 2026-10-07
+
+- **DARB follows Home Assistant's own exposure.** Whatever is exposed to Assist
+  (Settings › Voice assistants › Expose) is what DARB sees -- the same list every
+  assistant uses, no separate form. Sensors, people and weather are read; lights,
+  switches, covers, climate and the rest may also be changed. Exposing or
+  unexposing an entity reaches DARB at once.
+- The separate *Expose to DARB* form (Configure) is gone; its old picks are ignored.
+- Locks, alarm panels, garage doors and gates still need a person's approval in
+  the Darb app and are never opened by voice.
+
 ## 0.8.0 — 2026-10-06
 
 - **Device actions from DARB arrive at once.** The integration keeps one long
