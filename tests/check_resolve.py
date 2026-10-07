@@ -71,6 +71,7 @@ async def main():
     add("light.gails_kitchen_wall_left", "Gails kitchen wall left", kitchen)
     add("light.gails_kitchen_wall_right", "Gails kitchen wall right", kitchen)
     add("light.back_yard", "Back yard")
+    add("switch.greenhouse_main_light", "Lights", None, "off")
     add("sensor.greenhouse_current_temperature", "Greenhouse temperature", None, "21")
     see = {s.entity_id for s in hass.states.async_all()}
     exp = Exposure(see=see, control={e for e in see if not e.startswith("sensor.")})
@@ -103,8 +104,17 @@ async def main():
         resolve(hass, exp, "gails kitchen lights"),
         ["light.gails_kitchen_wall_left", "light.gails_kitchen_wall_right"],
     )
-    check("all the lights", len(resolve(hass, exp, "all the lights")), 6)
-    check("bare 'lights' is ambiguous", resolve(hass, exp, "lights"), [])
+    check(
+        "all the lights (a switch is named Lights)",
+        len(resolve(hass, exp, "all the lights")),
+        6,
+    )
+    check(
+        "a device named Lights",
+        resolve(hass, exp, "lights"),
+        ["switch.greenhouse_main_light"],
+    )
+    check("bare 'lamps' is ambiguous", resolve(hass, exp, "lamps"), [])
     check("entity id", resolve(hass, exp, "light.back_yard"), ["light.back_yard"])
     check(
         "unique partial",

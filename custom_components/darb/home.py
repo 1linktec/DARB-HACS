@@ -337,15 +337,15 @@ def resolve(hass: HomeAssistant, exp: Exposure, name: str) -> list[str]:
             spaceless.append(eid)
         elif st and nq in _norm(st.name):
             partial.append(eid)
-    # 1. A device called exactly that.
-    if len(exact) == 1:
-        return exact
-    # 2. An area, with or without a kind of device (Home Assistant reads
-    #    "living room lights" as the Living Room's lights, so do we).
     words = q.split()
     kind = KIND_WORDS.get(words[-1]) if words else None
     place = _norm(" ".join(words[:-1] if kind else words))
     asked_all = name.strip().lower().startswith(("all", "every"))
+    # 1. A device called exactly that ("all the lights" is never one device).
+    if len(exact) == 1 and not (asked_all and kind):
+        return exact
+    # 2. An area, with or without a kind of device (Home Assistant reads
+    #    "living room lights" as the Living Room's lights, so do we).
     if place or kind:
         hits = []
         for eid in exp.control:
