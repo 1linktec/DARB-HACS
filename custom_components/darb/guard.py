@@ -19,6 +19,13 @@ APP_SAYS = (
 READ_PREFIXES = ("Get", "HassGet")
 GUARDED_DOMAINS = {"lock", "alarm_control_panel"}
 GUARDED_CLASSES = {"garage", "gate", "door"}
+# A switch or button that opens the house shows up by NAME only ("Garage Door" on a relay):
+# HA gives it no device class. These domains are guarded when the name says so.
+NAMED_DOMAINS = {"switch", "button", "input_boolean", "script"}
+OPENER_NAME = re.compile(
+    r"\b(garage|gate|door|doors|lock|unlock|deadbolt|entry|entrance|alarm|disarm|shutter|opener)\b",
+    re.I,
+)
 
 
 def _lower_set(v: Any) -> set[str]:

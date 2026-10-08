@@ -57,7 +57,7 @@ from homeassistant.util.json import JsonObjectType
 import voluptuous as vol
 
 from .api import DarbClient, DarbError
-from .guard import GUARDED_CLASSES, GUARDED_DOMAINS
+from .guard import GUARDED_CLASSES, GUARDED_DOMAINS, NAMED_DOMAINS, OPENER_NAME
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -227,8 +227,15 @@ class Exposure:
 def guarded(state: State | None, entity_id: str) -> bool:
     domain = entity_id.split(".", 1)[0]
     dclass = state.attributes.get("device_class") if state else None
-    return domain in GUARDED_DOMAINS or (
-        domain == "cover" and dclass in GUARDED_CLASSES
+    name = (state.attributes.get("friendly_name") if state else None) or ""
+    return (
+        domain in GUARDED_DOMAINS
+        or (domain == "cover" and dclass in GUARDED_CLASSES)
+        # a relay or button named for a garage door, gate, lock or alarm opens the house too
+        or (
+            domain in NAMED_DOMAINS
+            and bool(OPENER_NAME.search(f"{name} {entity_id.replace('_', ' ')}"))
+        )
     )
 
 

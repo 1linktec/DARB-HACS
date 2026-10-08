@@ -3,6 +3,14 @@
 Each version here becomes a GitHub release (the `## x.y.z` heading is the tag
 without its `v`), and HACS shows its notes when it offers the update.
 
+## 0.10.4 — 2026-10-08
+
+- Security: a switch, button, helper or script named for a garage door, gate, door,
+  lock or alarm (e.g. a "Garage Door" relay) is now treated like a lock -- opening
+  it needs the robot (face + PIN) or the Darb app (signed in + PIN); HA voice can't.
+  Before, only locks, alarms and covers with a garage/gate/door class were guarded,
+  so a relay with no device class could be opened by any voice.
+
 ## 0.10.3 — 2026-10-08
 
 - Security: an exposed **script** whose name opens the house (open, unlock,
