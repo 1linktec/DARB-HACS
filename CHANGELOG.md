@@ -3,6 +3,13 @@
 Each version here becomes a GitHub release (the `## x.y.z` heading is the tag
 without its `v`), and HACS shows its notes when it offers the update.
 
+## 0.10.6 — 2026-10-08
+
+- After Home Assistant starts, the exposed devices are sent to DARB again at 1 and 5
+  minutes: slow integrations (cloud, Zigbee, Tuya) were still adding entities when the
+  first lists went, and DARB briefly knew 23 of 226. (The hub now also refuses to let a
+  much smaller list wipe what it knows unless a second list confirms it.)
+
 ## 0.10.5 — 2026-10-08
 
 - The opener guard reads "garage door" / "garage opener", not "garage" alone: a switch

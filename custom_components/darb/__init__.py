@@ -13,6 +13,8 @@ hub dispatches it. One gate on actuation, not two.
 
 from __future__ import annotations
 
+import asyncio
+
 import logging
 
 from homeassistant.components.homeassistant.exposed_entities import (
@@ -164,8 +166,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: DarbConfigEntry) -> bool
     # At HA's start, devices from slower integrations are not there yet: send
     # the full list again once HA has finished starting (measured 7 Oct: 9 of
     # 21 exposed devices reached the hub without this).
+    async def _resend() -> None:
+        # Slow integrations (cloud, Zigbee, Tuya) can still be adding entities after "started"
+        # (8 Oct: 23 of 226 reached the hub): send the full list again at 1 and 5 minutes.
+        for delay in (60, 240):
+            await asyncio.sleep(delay)
+            await home.async_exposure_changed()
+
     async def _started(_hass: HomeAssistant) -> None:
         await home.async_exposure_changed()
+        # cancelled with the integration if it is unloaded meanwhile
+        entry.async_create_background_task(hass, _resend(), "darb_resend_exposure")
 
     entry.async_on_unload(async_at_started(hass, _started))
     entry.async_on_unload(
