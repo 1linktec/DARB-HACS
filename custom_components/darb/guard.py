@@ -9,6 +9,7 @@ refusing here is the guarantee.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 APP_SAYS = (
@@ -28,6 +29,13 @@ def _lower_set(v: Any) -> set[str]:
 
 
 SECURING_ACTIONS = {"lock", "close", "arm", "arm_away", "arm_home", "arm_night"}
+# HA offers each exposed script as its own tool with no arguments, so the checks below
+# never see what it touches: a script whose name opens the house is refused.
+SCRIPT_OPENS = re.compile(
+    r"\b(open\w*|unlock\w*|disarm\w*|garage|gate\w*|door\w*|entry|entrance|shutter\w*|"
+    r"alarm off|let in|buzz\w*)\b",
+    re.I,
+)
 
 
 def _securing(base: str, domains: set) -> bool:
@@ -60,6 +68,12 @@ def guard_refusal(name: str, args: dict, guarded: list[dict]) -> str | None:
     act = str(args.get("action") or "").strip().lower().replace(" ", "_")
     if base == "HomeAction" and act in SECURING_ACTIONS:
         return None
+    if (
+        not base.startswith("Hass")
+        and base != "HomeAction"
+        and SCRIPT_OPENS.search(base.replace("_", " "))
+    ):
+        return APP_SAYS
     names = _lower_set(args.get("name"))
     areas = _lower_set(args.get("area")) | _lower_set(args.get("floor"))
     domains = _lower_set(args.get("domain"))

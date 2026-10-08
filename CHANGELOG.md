@@ -3,6 +3,13 @@
 Each version here becomes a GitHub release (the `## x.y.z` heading is the tag
 without its `v`), and HACS shows its notes when it offers the update.
 
+## 0.10.3 — 2026-10-08
+
+- Security: an exposed **script** whose name opens the house (open, unlock,
+  disarm, garage, gate, door…) is refused for a voice DARB can't identify. HA
+  offers each script as its own tool with no arguments, so the device checks
+  never saw what it touched. The hub refuses these too; this is the second layer.
+
 ## 0.10.2 — 2026-10-07
 
 - Locking a lock, closing a garage door or gate, and arming an alarm are allowed
