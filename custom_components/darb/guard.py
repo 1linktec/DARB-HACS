@@ -23,7 +23,7 @@ GUARDED_CLASSES = {"garage", "gate", "door"}
 # HA gives it no device class. These domains are guarded when the name says so.
 NAMED_DOMAINS = {"switch", "button", "input_boolean", "script"}
 OPENER_NAME = re.compile(
-    r"\b(garage|gate|door|doors|lock|unlock|deadbolt|entry|entrance|alarm|disarm|shutter|opener)\b",
+    r"\b(garage (door|opener)|gate|gates|door|doors|lock|unlock|deadbolt|entry door|alarm|disarm|shutter|opener)\b",
     re.I,
 )
 

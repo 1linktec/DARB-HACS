@@ -3,6 +3,11 @@
 Each version here becomes a GitHub release (the `## x.y.z` heading is the tag
 without its `v`), and HACS shows its notes when it offers the update.
 
+## 0.10.5 — 2026-10-08
+
+- The opener guard reads "garage door" / "garage opener", not "garage" alone: a switch
+  named for a place ("Garage Basement Do Not Disturb") is not an opener.
+
 ## 0.10.4 — 2026-10-08
 
 - Security: a switch, button, helper or script named for a garage door, gate, door,
