@@ -27,6 +27,22 @@ def _lower_set(v: Any) -> set[str]:
     return {s for s in (str(x).strip().lower() for x in items) if s}
 
 
+SECURING_ACTIONS = {"lock", "close", "arm", "arm_away", "arm_home", "arm_night"}
+
+
+def _securing(base: str, domains: set) -> bool:
+    """HA's own intents that make a guarded device safer: turning a lock "on"
+    locks it; turning a cover (garage door, gate) "off" closes it."""
+    domains = {d for d in domains if d}
+    if not domains:
+        return False
+    if base == "HassTurnOn":
+        return domains <= {"lock"}
+    if base in ("HassTurnOff", "HassCloseCover"):
+        return domains <= {"cover"}
+    return False
+
+
 def guard_refusal(name: str, args: dict, guarded: list[dict]) -> str | None:
     """Why an HA tool call may not run for an unidentified speaker, or None.
 
@@ -36,21 +52,35 @@ def guard_refusal(name: str, args: dict, guarded: list[dict]) -> str | None:
     without narrowing to a domain that leaves it out. The same rule runs in the
     integration before HA executes anything."""
     # HA namespaces tools from several APIs: "intent__HassTurnOff".
-    if name.rpartition("__")[2].startswith(READ_PREFIXES):
+    base = name.rpartition("__")[2]
+    if base.startswith(READ_PREFIXES):
         return None
     args = args or {}
+    # Making the house safer is always allowed (Jeff, 7 Oct): lock, close, arm.
+    act = str(args.get("action") or "").strip().lower().replace(" ", "_")
+    if base == "HomeAction" and act in SECURING_ACTIONS:
+        return None
     names = _lower_set(args.get("name"))
     areas = _lower_set(args.get("area")) | _lower_set(args.get("floor"))
     domains = _lower_set(args.get("domain"))
     classes = _lower_set(args.get("device_class"))
-    if domains & GUARDED_DOMAINS or classes & GUARDED_CLASSES:
+    if (domains & GUARDED_DOMAINS or classes & GUARDED_CLASSES) and not _securing(
+        base, domains
+    ):
         return APP_SAYS
     for g in guarded or []:
         if names & _lower_set(
             [g.get("name"), g.get("entity_id"), *(g.get("aliases") or [])]
         ):
-            return APP_SAYS
+            if not _securing(base, {g.get("domain")}):
+                return APP_SAYS
+            continue
         in_area = areas & _lower_set([g.get("area"), g.get("floor")])
-        if not names and in_area and (not domains or g.get("domain") in domains):
+        if (
+            not names
+            and in_area
+            and (not domains or g.get("domain") in domains)
+            and not _securing(base, {g.get("domain")})
+        ):
             return APP_SAYS
     return None

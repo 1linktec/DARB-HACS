@@ -3,6 +3,13 @@
 Each version here becomes a GitHub release (the `## x.y.z` heading is the tag
 without its `v`), and HACS shows its notes when it offers the update.
 
+## 0.10.2 — 2026-10-07
+
+- Locking a lock, closing a garage door or gate, and arming an alarm are allowed
+  from HA voice: making the house safer needs no check. Opening, unlocking and
+  disarming are still refused here -- they need the robot (face + PIN) or the
+  Darb app (signed in + PIN).
+
 ## 0.10.1 — 2026-10-07
 
 - "All the lights" always means every exposed light, even when a device is
