@@ -3,6 +3,10 @@
 Each version here becomes a GitHub release (the `## x.y.z` heading is the tag
 without its `v`), and HACS shows its notes when it offers the update.
 
+## 0.11.1 — 2026-10-14
+
+- Code style only (the lint check failed on 0.11.0): long lines wrapped; no change in behaviour.
+
 ## 0.11.0 — 2026-10-14
 
 - Home Assistant's **floors and areas** now go to DARB as rooms -- when HA starts, on every

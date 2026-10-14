@@ -231,7 +231,8 @@ def guarded(state: State | None, entity_id: str) -> bool:
     return (
         domain in GUARDED_DOMAINS
         or (domain == "cover" and dclass in GUARDED_CLASSES)
-        # a relay or button named for a garage door, gate, lock or alarm opens the house too
+        # a relay or button named for a garage door, gate, lock or alarm opens
+        # the house too
         or (
             domain in NAMED_DOMAINS
             and bool(OPENER_NAME.search(f"{name} {entity_id.replace('_', ' ')}"))
@@ -666,7 +667,9 @@ class HomeSync:
         try:
             await self.client.async_push_areas(floors, areas)
         except DarbError as e:
-            _LOGGER.warning("DARB: could not send the floors and areas to the hub: %s", e)
+            _LOGGER.warning(
+                "DARB: could not send the floors and areas to the hub: %s", e
+            )
 
     async def push_all(self) -> None:
         await self.push_areas()
