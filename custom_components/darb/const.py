@@ -34,6 +34,7 @@ API_REDEEM = "/clients/redeem"
 # the Bot Herder queues for HA to run (hub schema 049).
 API_HA_ENTITIES = "/ha/entities"
 API_HA_ACTIONS = "/ha/actions"
+API_HA_AREAS = "/areas/ha-sync"
 
 # Fired once for every new DARB notification, so an owner routes them however
 # they already route everything else. An event rather than a notify call: we do

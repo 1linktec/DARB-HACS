@@ -3,6 +3,14 @@
 Each version here becomes a GitHub release (the `## x.y.z` heading is the tag
 without its `v`), and HACS shows its notes when it offers the update.
 
+## 0.11.0 — 2026-10-14
+
+- Home Assistant's **floors and areas** now go to DARB as rooms -- when HA starts, on every
+  full update, and the moment you add, rename or remove one. DARB keeps its own rooms beside
+  them (names follow HA; DARB's shapes and zones are never touched; an area HA removes is kept
+  and marked). A DARB speaker or robot belongs to one of these rooms, so "turn off the lights"
+  said in the living room means the living room's lights.
+
 ## 0.10.6 — 2026-10-08
 
 - After Home Assistant starts, the exposed devices are sent to DARB again at 1 and 5

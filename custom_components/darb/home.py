@@ -615,6 +615,9 @@ class HomeSync:
     async def async_start(self) -> None:
         await self.push_all()
         self.track()
+        # Rooms: HA's floors and areas follow into DARB the moment they change.
+        for ev in (ar.EVENT_AREA_REGISTRY_UPDATED, fr.EVENT_FLOOR_REGISTRY_UPDATED):
+            self._unsubs.append(self.hass.bus.async_listen(ev, self._areas_changed))
         self._unsubs.append(async_track_time_interval(self.hass, self._full, FULL_PUSH))
         self._task = self.hass.async_create_background_task(
             self._actions(), "darb_ha_actions"
@@ -647,7 +650,26 @@ class HomeSync:
         if self._flush:
             self._flush.cancel()
 
+    @callback
+    def _areas_changed(self, _event: Event) -> None:
+        self.hass.async_create_task(self.push_areas())
+
+    async def push_areas(self) -> None:
+        floors = [
+            {"floor_id": f.floor_id, "name": f.name, "level": f.level}
+            for f in fr.async_get(self.hass).async_list_floors()
+        ]
+        areas = [
+            {"area_id": a.id, "name": a.name, "floor_id": a.floor_id}
+            for a in ar.async_get(self.hass).async_list_areas()
+        ]
+        try:
+            await self.client.async_push_areas(floors, areas)
+        except DarbError as e:
+            _LOGGER.warning("DARB: could not send the floors and areas to the hub: %s", e)
+
     async def push_all(self) -> None:
+        await self.push_areas()
         exp = self.exposure()
         ents = [d for eid in sorted(exp.see) if (d := describe(self.hass, eid, exp))]
         try:

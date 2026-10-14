@@ -18,6 +18,7 @@ from .const import (
     API_CONVERSE_STREAM,
     API_FLEET,
     API_HA_ACTIONS,
+    API_HA_AREAS,
     API_HA_ENTITIES,
     API_NOTIFICATIONS,
     API_REDEEM,
@@ -199,6 +200,12 @@ class DarbClient:
             API_HA_ENTITIES,
             timeout=30,
             json={"full": full, "entities": entities},
+        )
+
+    async def async_push_areas(self, floors: list[dict], areas: list[dict]) -> Any:
+        """HA's floors and areas: DARB keeps them as rooms beside its own."""
+        return await self._request(
+            "POST", API_HA_AREAS, timeout=30, json={"floors": floors, "areas": areas}
         )
 
     async def async_claim_actions(self, wait: float = 0) -> list[dict]:
