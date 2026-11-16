@@ -3,6 +3,16 @@
 Each version here becomes a GitHub release (the `## x.y.z` heading is the tag
 without its `v`), and HACS shows its notes when it offers the update.
 
+## 0.12.0 — 2026-11-16
+
+- **DARB and Home Assistant now mean the same devices.** When a request meant several devices
+  ("turn off the lounge lamps", "turn off the living room") DARB sent the words and this
+  integration worked out again which devices they meant, by its own older rules -- so the ceiling
+  light could go off with the lamps, or every switch in a room with its lights, while DARB said
+  it had only done what you asked. The hub now says exactly which devices it means and the
+  integration acts on those and nothing else (each must still be exposed to DARB for control).
+  Needs a hub from 16 Nov 2026 or later; with an older hub nothing changes.
+
 ## 0.11.1 — 2026-10-14
 
 - Code style only (the lint check failed on 0.11.0): long lines wrapped; no change in behaviour.

@@ -150,6 +150,23 @@ async def main():
     )
     ok, _said, _state, say = await act(hass, exp, "garage", "off", None)
     check("act on nothing", (ok, say), (False, None))
+    # (0.12.0) the hub says which devices it means: exactly those, not what the
+    # words would resolve to here.
+    calls.clear()
+    one = lr_lights[:1]
+    ok, _said, _state, say = await act(
+        hass, exp, "the lounge lights", "off", None, None, one
+    )
+    check("act on the hub's targets only", (ok, sorted(calls)), (True, one))
+    calls.clear()
+    ok, _said, _state, say = await act(
+        hass, exp, "the lounge lights", "off", None, None, ["light.not_exposed"]
+    )
+    check(
+        "targets that are not exposed are refused, never guessed from the words",
+        (ok, sorted(calls)),
+        (False, []),
+    )
     await hass.async_stop()
     print("FAILED:", FAILS if FAILS else "none")
     return 1 if FAILS else 0

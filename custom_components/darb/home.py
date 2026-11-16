@@ -386,10 +386,26 @@ async def act(
     action: str,
     value: Any,
     context: Context | None = None,
+    targets: list[str] | None = None,
 ) -> tuple[bool, str, str | None, str | None]:
     """Do `action` to whatever `name` means (one device, or an area's devices).
-    (ok, what happened, state afterwards, a sentence to say)."""
-    targets = resolve(hass, exp, name)
+    (ok, what happened, state afterwards, a sentence to say).
+
+    `targets` (0.12.0): the hub has already decided which devices the words mean
+    and says so. Then exactly those are acted on -- each still has to be exposed
+    to DARB for control -- and the words are only what to call them. Without it
+    (an older hub, or HA's own conversation tools) the words are resolved here."""
+    if targets:
+        targets = [t for t in targets if isinstance(t, str) and t in exp.see]
+        if not targets:
+            return (
+                False,
+                f"None of the devices DARB meant by {name!r} is exposed to it now.",
+                None,
+                None,
+            )
+    else:
+        targets = resolve(hass, exp, name)
     if not targets:
         return False, f"No exposed device or area matches {name!r}.", None, None
     if len(targets) == 1:
@@ -728,6 +744,7 @@ class HomeSync:
                     str(a.get("action") or ""),
                     a.get("value"),
                     Context(),
+                    a.get("targets") if isinstance(a.get("targets"), list) else None,
                 )
                 _LOGGER.info("DARB task %s: %s", a.get("id"), said)
                 try:
