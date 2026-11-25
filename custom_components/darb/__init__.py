@@ -52,6 +52,7 @@ PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
     Platform.CONVERSATION,
     Platform.SENSOR,
+    Platform.TODO,
 ]
 
 # Configured through the UI only; this is what hassfest expects when an

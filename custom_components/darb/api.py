@@ -22,6 +22,7 @@ from .const import (
     API_HA_ENTITIES,
     API_NOTIFICATIONS,
     API_REDEEM,
+    API_SHOPPING,
     API_TASKS,
     KEY_PATTERN,
 )
@@ -147,6 +148,25 @@ class DarbClient:
             raise
         except Exception as e:  # network / timeout / non-JSON
             raise DarbError(str(e) or type(e).__name__) from e
+
+    async def async_shopping(self, done: bool = False) -> list[dict]:
+        r = await self._request(
+            "GET", API_SHOPPING, params={"done": "true" if done else "false"}
+        )
+        return r.get("items", [])
+
+    async def async_shopping_add(self, name: str) -> Any:
+        return await self._request(
+            "POST", API_SHOPPING, json={"name": name, "via": "ha"}
+        )
+
+    async def async_shopping_done(self, line_id: str, done: bool) -> Any:
+        return await self._request(
+            "PATCH", f"{API_SHOPPING}/{line_id}", json={"done": done}
+        )
+
+    async def async_shopping_delete(self, line_id: str) -> Any:
+        return await self._request("DELETE", f"{API_SHOPPING}/{line_id}")
 
     async def async_fleet(self) -> dict:
         return await self._request("GET", API_FLEET)

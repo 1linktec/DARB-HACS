@@ -35,6 +35,8 @@ API_REDEEM = "/clients/redeem"
 API_HA_ENTITIES = "/ha/entities"
 API_HA_ACTIONS = "/ha/actions"
 API_HA_AREAS = "/areas/ha-sync"
+# The household's shopping list, kept by DARB (hub 25 Nov 2026+): a to-do list here.
+API_SHOPPING = "/inventory/shopping"
 
 # Fired once for every new DARB notification, so an owner routes them however
 # they already route everything else. An event rather than a notify call: we do

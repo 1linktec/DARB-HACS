@@ -3,6 +3,14 @@
 Each version here becomes a GitHub release (the `## x.y.z` heading is the tag
 without its `v`), and HACS shows its notes when it offers the update.
 
+## 0.13.0 — 2026-11-25
+
+- **DARB's shopping list is a to-do list in Home Assistant** ("DARB hub Shopping list"). DARB now keeps the
+  household's inventory and groceries (the handheld scanner, the Darb app, voice); what DARB puts on the
+  shopping list -- including things that run low -- shows here, and what you add, tick off or delete here
+  goes to DARB. Refreshed every 30 seconds. Needs a hub from 25 Nov 2026 or later; with an older hub the
+  list is unavailable and nothing else changes.
+
 ## 0.12.0 — 2026-11-16
 
 - **DARB and Home Assistant now mean the same devices.** When a request meant several devices
